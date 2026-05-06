@@ -56,11 +56,32 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Theme override tokens */
+:root[data-theme='dark'] {
+  --color-surface-0: #0b1220;
+  --color-surface-50: #111827;
+  --color-surface-100: #1f2937;
+  --color-surface-200: #374151;
+  --color-surface-300: #4b5563;
+  --color-surface-400: #9ca3af;
+  --color-surface-500: #d1d5db;
+  --color-surface-600: #e5e7eb;
+  --color-surface-700: #f3f4f6;
+  --color-surface-800: #f9fafb;
+  --color-surface-900: #ffffff;
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
 body {
   background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f1f5f9 100%);
   color: var(--color-surface-800);
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+:root[data-theme='dark'] body {
+  background: radial-gradient(circle at top left, #1e1b4b 0%, #0b1220 45%, #020617 100%);
 }
 
 #root {
@@ -149,6 +170,11 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme='dark'] .glass {
+  background: rgba(17, 24, 39, 0.72);
+  border: 1px solid rgba(75, 85, 99, 0.6);
 }
 
 .glass-subtle {

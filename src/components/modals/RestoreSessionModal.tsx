@@ -3,6 +3,7 @@
  */
 
 import { RotateCcw, X, Clock } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface RestoreSessionModalProps {
   pdfFileName: string;
@@ -18,15 +19,41 @@ export function RestoreSessionModal({
   onDismiss,
 }: RestoreSessionModalProps) {
   const timeAgo = getTimeAgo(timestamp);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    const firstBtn = modalRef.current?.querySelector<HTMLButtonElement>('button');
+    firstBtn?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onDismiss();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      prev?.focus();
+    };
+  }, [onDismiss]);
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
       style={{ background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)' }}
+      role="presentation"
     >
       <div
+        ref={modalRef}
         className="card p-6 max-w-md w-full mx-4 animate-slide-in-up"
         style={{ boxShadow: 'var(--shadow-elevated)' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="restore-session-title"
+        aria-describedby="restore-session-description"
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
@@ -40,10 +67,10 @@ export function RestoreSessionModal({
               <RotateCcw className="w-5 h-5" style={{ color: 'var(--color-brand-500)' }} />
             </div>
             <div>
-              <h3 className="text-base font-semibold" style={{ color: 'var(--color-surface-900)' }}>
+              <h3 id="restore-session-title" className="text-base font-semibold" style={{ color: 'var(--color-surface-900)' }}>
                 Restore Previous Session?
               </h3>
-              <p className="text-xs" style={{ color: 'var(--color-surface-400)' }}>
+              <p id="restore-session-description" className="text-xs" style={{ color: 'var(--color-surface-400)' }}>
                 An unsaved session was found
               </p>
             </div>
@@ -52,6 +79,7 @@ export function RestoreSessionModal({
             onClick={onDismiss}
             className="btn btn-ghost btn-icon btn-sm"
             id="dismiss-restore-btn"
+            aria-label="Dismiss restore session prompt"
           >
             <X className="w-4 h-4" />
           </button>

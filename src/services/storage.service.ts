@@ -15,6 +15,23 @@ interface PDFProject {
   templateSchemas: unknown;
   schemaFields: unknown;
   fieldBindings: unknown;
+  validationRules?: unknown;
+  conditionalRules?: unknown;
+  snapshots?: Array<{
+    id: string;
+    createdAt: number;
+    templateSchemas: unknown;
+    schemaFields: unknown;
+    fieldBindings: unknown;
+  }>;
+  /** Optional list of previous generation outputs metadata */
+  generationOutputs?: Array<{
+    id: string;
+    name: string;
+    createdAt: number;
+    zipBase64?: string;
+    count?: number;
+  }>;
   thumbnailBase64?: string; // For gallery view
 }
 

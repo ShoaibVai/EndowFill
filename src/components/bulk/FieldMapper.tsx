@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { ArrowRight, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Download, Upload } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { findBestColumnMatch } from '../../utils/stringUtils';
 
@@ -7,8 +7,14 @@ export function FieldMapper() {
   const schemaFields = useAppStore((s) => s.schemaFields);
   const excelColumns = useAppStore((s) => s.excelColumns);
   const fieldBindings = useAppStore((s) => s.fieldBindings);
+  const validationRules = useAppStore((s) => s.validationRules);
+  const conditionalRules = useAppStore((s) => s.conditionalRules);
   const addFieldBinding = useAppStore((s) => s.addFieldBinding);
+  const setFieldBindings = useAppStore((s) => s.setFieldBindings);
+  const setValidationRules = useAppStore((s) => s.setValidationRules);
+  const setConditionalRules = useAppStore((s) => s.setConditionalRules);
   const removeFieldBinding = useAppStore((s) => s.removeFieldBinding);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-match fields on mount if not already mapped
   useEffect(() => {
@@ -47,6 +53,47 @@ export function FieldMapper() {
 
   const isFullyMapped = schemaFields.every(f => fieldBindings.some(b => b.schemaFieldId === f.name));
 
+  const handleExportMap = () => {
+    const payload = {
+      version: '1.0',
+      createdAt: Date.now(),
+      fieldBindings,
+      validationRules,
+      conditionalRules,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mapping_${new Date().getTime()}.pdfmap`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportMap = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      if (payload.version !== '1.0') {
+        throw new Error('Unsupported mapping version');
+      }
+      setFieldBindings(Array.isArray(payload.fieldBindings) ? payload.fieldBindings : []);
+      setValidationRules(Array.isArray(payload.validationRules) ? payload.validationRules : []);
+      setConditionalRules(Array.isArray(payload.conditionalRules) ? payload.conditionalRules : []);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to import .pdfmap file', err);
+      alert('Failed to import mapping file. Please select a valid .pdfmap export.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="card flex flex-col p-6 animate-fade-in" style={{ border: '1px solid var(--color-surface-200)' }}>
       <div className="flex items-center justify-between mb-6">
@@ -68,6 +115,19 @@ export function FieldMapper() {
           )}
           <button onClick={handleAutoMatch} className="btn btn-secondary btn-sm">
             <RefreshCw className="w-3.5 h-3.5" /> Auto Match
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdfmap,application/json"
+            className="hidden"
+            onChange={handleImportMap}
+          />
+          <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary btn-sm" aria-label="Import field mapping">
+            <Upload className="w-3.5 h-3.5" /> Import .pdfmap
+          </button>
+          <button onClick={handleExportMap} className="btn btn-secondary btn-sm" aria-label="Export field mapping">
+            <Download className="w-3.5 h-3.5" /> Export .pdfmap
           </button>
         </div>
       </div>

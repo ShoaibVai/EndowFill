@@ -5,6 +5,7 @@
 import { FileText, Save, Clock, Database, HardDrive } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { StorageService } from '../../services/storage.service';
+import { ThemeToggle } from '../settings/ThemeToggle';
 
 export function Navbar() {
   const lastSavedAt = useAppStore((s) => s.lastSavedAt);
@@ -23,6 +24,8 @@ export function Navbar() {
   const basePdfBuffer = useAppStore((s) => s.basePdfBuffer);
   const schemaFields = useAppStore((s) => s.schemaFields);
   const fieldBindings = useAppStore((s) => s.fieldBindings);
+  const validationRules = useAppStore((s) => s.validationRules);
+  const conditionalRules = useAppStore((s) => s.conditionalRules);
   const currentProjectId = useAppStore((s) => s.currentProjectId);
   const setCurrentProjectId = useAppStore((s) => s.setCurrentProjectId);
 
@@ -34,6 +37,18 @@ export function Navbar() {
     
     try {
       const idToSave = currentProjectId || `proj-${Date.now()}`;
+      const existing = currentProjectId ? await StorageService.getProject(currentProjectId) : undefined;
+      const snapshots = [
+        ...(existing?.snapshots ?? []),
+        {
+          id: `snap-${Date.now()}`,
+          createdAt: Date.now(),
+          templateSchemas: pdfmeTemplate.schemas,
+          schemaFields,
+          fieldBindings,
+        },
+      ].slice(-10);
+
       await StorageService.saveProject({
         id: idToSave,
         name: pdfFileName || 'Untitled Project',
@@ -43,6 +58,10 @@ export function Navbar() {
         templateSchemas: pdfmeTemplate.schemas,
         schemaFields,
         fieldBindings,
+        validationRules,
+        conditionalRules,
+        snapshots,
+        generationOutputs: existing?.generationOutputs ?? [],
       });
       setCurrentProjectId(idToSave);
       addNotification({ message: 'Project saved successfully to DB!', level: 'success' });
@@ -147,6 +166,7 @@ export function Navbar() {
         <button onClick={loadTestData} className="btn btn-ghost btn-sm text-xs border border-indigo-200">
           <Database className="w-3.5 h-3.5" /> Test Data
         </button>
+        <ThemeToggle />
       </div>
     </nav>
   );

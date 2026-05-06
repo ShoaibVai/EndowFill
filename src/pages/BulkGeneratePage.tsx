@@ -12,6 +12,8 @@ import { ExcelPreview } from '../components/bulk/ExcelPreview';
 import { FieldMapper } from '../components/bulk/FieldMapper';
 import { FilenameEditor } from '../components/bulk/FilenameEditor';
 import { GenerationProgress } from '../components/bulk/GenerationProgress';
+import { ValidationRulesEditor } from '../components/bulk/ValidationRulesEditor';
+import ConditionalRulesBuilder from '../components/bulk/ConditionalRulesBuilder';
 import { useGenerationEngine } from '../hooks/useGenerationEngine';
 
 export function BulkGeneratePage() {
@@ -21,7 +23,7 @@ export function BulkGeneratePage() {
   const excelRows = useAppStore((s) => s.excelRows);
   const fieldBindings = useAppStore((s) => s.fieldBindings);
 
-  const { startGeneration, cancelGeneration, generationJob } = useGenerationEngine();
+  const { startGeneration, cancelGeneration, pauseGeneration, resumeGeneration, downloadSinglePdf, generationJob } = useGenerationEngine();
   const [filenamePattern, setFilenamePattern] = useState('document_{row_number}.pdf');
 
   // If no template is designed yet, show empty state
@@ -90,6 +92,12 @@ export function BulkGeneratePage() {
             <div className="flex-1 w-full flex flex-col gap-6">
                <FieldMapper />
                
+               <ValidationRulesEditor />
+               <div className="mt-4">
+                 <h4 className="font-semibold">Conditional Field Rules</h4>
+                 <ConditionalRulesBuilder />
+               </div>
+
                {isFullyMapped && !generationJob && (
                  <div className="card p-6 flex flex-col gap-6" style={{ background: 'linear-gradient(135deg, var(--color-brand-50), white)', border: '1px solid var(--color-brand-200)' }}>
                    <FilenameEditor value={filenamePattern} onChange={setFilenamePattern} />
@@ -110,7 +118,12 @@ export function BulkGeneratePage() {
                )}
 
                {generationJob && (
-                 <GenerationProgress onCancel={cancelGeneration} />
+                 <GenerationProgress
+                   onCancel={cancelGeneration}
+                   onPause={pauseGeneration}
+                   onResume={resumeGeneration}
+                   onDownloadSingle={downloadSinglePdf}
+                 />
                )}
             </div>
             

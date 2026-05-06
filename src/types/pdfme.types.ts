@@ -94,6 +94,15 @@ export interface IValidationRule {
   customError?: string;
 }
 
+/** Conditional visibility rule for fields */
+export interface IConditionalRule {
+  id: string;
+  targetFieldId: string; // field to show/hide
+  sourceColumnHeader: string; // Excel column header to read
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains';
+  value: string; // value to compare against
+}
+
 // ---------------------------------------------------------------------------
 // Generation Job Types
 // ---------------------------------------------------------------------------
@@ -133,6 +142,8 @@ export interface IGenerationJob {
   startedAt?: number;
   /** End timestamp */
   completedAt?: number;
+  /** Estimated remaining time in ms */
+  etaMs?: number;
 }
 
 // ---------------------------------------------------------------------------

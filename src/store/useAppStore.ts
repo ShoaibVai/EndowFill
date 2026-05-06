@@ -8,12 +8,14 @@
 import { create } from 'zustand';
 import type {
   ActiveTab,
+  IConditionalRule,
   IExcelColumn,
   IFieldBinding,
   IGenerationJob,
   INotification,
   IPdfmeTemplate,
   ISchemaField,
+  IValidationRule,
 } from '../types/pdfme.types';
 
 // ---------------------------------------------------------------------------
@@ -28,14 +30,17 @@ interface AppState {
   currentProjectId: string | null;
   setCurrentProjectId: (id: string | null) => void;
 
+  theme: 'light' | 'dark' | 'system';
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+
   // -- PDF Template --
   /** The raw PDF ArrayBuffer uploaded by the user */
   basePdfBuffer: ArrayBuffer | null;
-  setBasePdfBuffer: (buf: ArrayBuffer) => void;
+  setBasePdfBuffer: (buf: ArrayBuffer | null) => void;
 
   /** Full pdfme template (set by Designer on every change) */
   pdfmeTemplate: IPdfmeTemplate | null;
-  setPdfmeTemplate: (tpl: IPdfmeTemplate) => void;
+  setPdfmeTemplate: (tpl: IPdfmeTemplate | null) => void;
 
   /** Flat list of schema fields derived from the pdfme schema pages */
   schemaFields: ISchemaField[];
@@ -44,6 +49,12 @@ interface AppState {
   /** The uploaded PDF file name for display */
   pdfFileName: string;
   setPdfFileName: (name: string) => void;
+
+  // -- Multi-page --
+  currentPageIndex: number;
+  setCurrentPageIndex: (i: number) => void;
+  addPage: () => void;
+  removePage: () => void;
 
   // -- Excel Data --
   excelColumns: IExcelColumn[];
@@ -60,6 +71,13 @@ interface AppState {
   setFieldBindings: (bindings: IFieldBinding[]) => void;
   addFieldBinding: (binding: IFieldBinding) => void;
   removeFieldBinding: (schemaFieldId: string) => void;
+
+  // -- Validation Rules --
+  validationRules: IValidationRule[];
+  setValidationRules: (rules: IValidationRule[]) => void;
+  // -- Conditional Rules --
+  conditionalRules: IConditionalRule[];
+  setConditionalRules: (r: IConditionalRule[]) => void;
 
   // -- Generation --
   generationJob: IGenerationJob | null;
@@ -89,6 +107,9 @@ export const useAppStore = create<AppState>((set) => ({
   currentProjectId: null,
   setCurrentProjectId: (id) => set({ currentProjectId: id }),
 
+  theme: 'system',
+  setTheme: (theme) => set({ theme }),
+
   // -- PDF Template --
   basePdfBuffer: null,
   setBasePdfBuffer: (buf) => set({ basePdfBuffer: buf, hasUnsavedChanges: true }),
@@ -101,6 +122,26 @@ export const useAppStore = create<AppState>((set) => ({
 
   pdfFileName: '',
   setPdfFileName: (name) => set({ pdfFileName: name }),
+
+  // -- Multi-page editor state --
+  currentPageIndex: 0,
+  setCurrentPageIndex: (i: number) => set({ currentPageIndex: i }),
+  addPage: () => set((s) => {
+    const tpl = s.pdfmeTemplate || { basePdf: null, schemas: [] } as any;
+    const schemas = Array.isArray(tpl.schemas) ? [...tpl.schemas, {}] : [{}];
+    const newTpl = { ...tpl, schemas } as any;
+    return { pdfmeTemplate: newTpl, hasUnsavedChanges: true };
+  }),
+  removePage: () => set((s) => {
+    const tpl = s.pdfmeTemplate;
+    if (!tpl || !Array.isArray(tpl.schemas) || tpl.schemas.length === 0) return {} as any;
+    const idx = s.currentPageIndex || 0;
+    const schemas = tpl.schemas.slice();
+    schemas.splice(idx, 1);
+    const newTpl = { ...tpl, schemas } as any;
+    const nextIndex = Math.max(0, Math.min(idx, schemas.length - 1));
+    return { pdfmeTemplate: newTpl, currentPageIndex: nextIndex, hasUnsavedChanges: true } as any;
+  }),
 
   // -- Excel Data --
   excelColumns: [],
@@ -126,6 +167,14 @@ export const useAppStore = create<AppState>((set) => ({
     set((s) => ({
       fieldBindings: s.fieldBindings.filter((b) => b.schemaFieldId !== schemaFieldId),
     })),
+
+  // -- Validation Rules --
+  // Per-field validation rules editable in the UI and read by the worker
+  validationRules: [],
+  setValidationRules: (rules) => set({ validationRules: rules }),
+  // -- Conditional Rules --
+  conditionalRules: [],
+  setConditionalRules: (r) => set({ conditionalRules: r }),
 
   // -- Generation --
   generationJob: null,

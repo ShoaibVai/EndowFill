@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { Upload, Download, ZoomIn, ZoomOut, RotateCcw, Layers } from 'lucide-react';
+import { Upload, Download, ZoomIn, ZoomOut, RotateCcw, Layers, Plus, Trash, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { generateExcelTemplate } from '../../utils/excelHelpers';
 
@@ -15,6 +15,10 @@ export function EditorToolbar() {
   const setPdfFileName = useAppStore((s) => s.setPdfFileName);
   const schemaFields = useAppStore((s) => s.schemaFields);
   const pdfFileName = useAppStore((s) => s.pdfFileName);
+  const currentPageIndex = useAppStore((s) => (s as any).currentPageIndex || 0);
+  const setCurrentPageIndex = useAppStore((s) => (s as any).setCurrentPageIndex) as (i: number) => void;
+  const addPage = useAppStore((s) => (s as any).addPage) as () => void;
+  const removePage = useAppStore((s) => (s as any).removePage) as () => void;
 
   const handlePdfUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,11 +90,30 @@ export function EditorToolbar() {
 
       {/* Center — Info */}
       {schemaFields.length > 0 && (
-        <div className="hidden md:flex items-center gap-1.5">
-          <Layers className="w-3.5 h-3.5" style={{ color: 'var(--color-brand-500)' }} />
-          <span className="text-xs font-medium" style={{ color: 'var(--color-surface-500)' }}>
-            {schemaFields.length} field{schemaFields.length !== 1 ? 's' : ''} defined
-          </span>
+        <div className="hidden md:flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5" style={{ color: 'var(--color-brand-500)' }} />
+            <span className="text-xs font-medium" style={{ color: 'var(--color-surface-500)' }}>
+              {schemaFields.length} field{schemaFields.length !== 1 ? 's' : ''} defined
+            </span>
+          </div>
+
+          {/* Page controls */}
+          <div className="flex items-center gap-1 border rounded-lg px-2 py-1 bg-surface-0">
+            <button className="btn btn-ghost btn-sm p-1" onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))} title="Previous page">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="text-xs px-2">Page {currentPageIndex + 1}</div>
+            <button className="btn btn-ghost btn-sm p-1" onClick={() => setCurrentPageIndex(currentPageIndex + 1)} title="Next page">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button className="btn btn-ghost btn-sm p-1" onClick={() => addPage()} title="Add page">
+              <Plus className="w-4 h-4" />
+            </button>
+            <button className="btn btn-ghost btn-sm p-1 text-rose-600" onClick={() => removePage()} title="Remove current page">
+              <Trash className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 

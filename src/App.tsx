@@ -5,18 +5,22 @@
  * auto-save restoration, and toast notifications.
  */
 
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { TabNav } from './components/layout/TabNav';
-import { EditorPage } from './pages/EditorPage';
-import { BulkGeneratePage } from './pages/BulkGeneratePage';
-import { ProjectsPage } from './pages/ProjectsPage';
 import { RestoreSessionModal } from './components/modals/RestoreSessionModal';
+import ErrorBoundary from './components/errors/ErrorBoundary';
 import { useAppStore } from './store/useAppStore';
 import { useAutoSave } from './hooks/useAutoSave';
 
+const EditorPage = lazy(() => import('./pages/EditorPage').then((m) => ({ default: m.EditorPage })));
+const BulkGeneratePage = lazy(() => import('./pages/BulkGeneratePage').then((m) => ({ default: m.BulkGeneratePage })));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
+
 export default function App() {
   const activeTab = useAppStore((s) => s.activeTab);
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
   const notifications = useAppStore((s) => s.notifications);
   const removeNotification = useAppStore((s) => s.removeNotification);
 
@@ -36,46 +40,74 @@ export default function App() {
     return () => timers.forEach(clearTimeout);
   }, [notifications, removeNotification]);
 
+  // Hydrate theme preference once on app boot
+  useEffect(() => {
+    const saved = window.localStorage.getItem('app-theme');
+    if (saved === 'light' || saved === 'dark' || saved === 'system') {
+      setTheme(saved);
+    }
+  }, [setTheme]);
+
+  // Apply and persist theme
+  useEffect(() => {
+    const root = document.documentElement;
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const effective = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+    root.setAttribute('data-theme', effective);
+    window.localStorage.setItem('app-theme', theme);
+  }, [theme]);
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <TabNav />
+    <ErrorBoundary>
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <TabNav />
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-        {activeTab === 'projects' ? (
-          <ProjectsPage />
-        ) : activeTab === 'editor' ? (
-          <EditorPage />
-        ) : (
-          <BulkGeneratePage />
+        {/* Main content */}
+        <main className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
+          <Suspense fallback={<div className="p-6 text-sm" style={{ color: 'var(--color-surface-500)' }}>Loading page...</div>}>
+            {activeTab === 'projects' ? (
+              <ErrorBoundary>
+                <ProjectsPage />
+              </ErrorBoundary>
+            ) : activeTab === 'editor' ? (
+              <ErrorBoundary>
+                <EditorPage />
+              </ErrorBoundary>
+            ) : (
+              <ErrorBoundary>
+                <BulkGeneratePage />
+              </ErrorBoundary>
+            )}
+          </Suspense>
+        </main>
+
+        {/* Restore session modal */}
+        {hasSavedSession && savedSessionInfo && (
+          <RestoreSessionModal
+            pdfFileName={savedSessionInfo.pdfFileName}
+            timestamp={savedSessionInfo.timestamp}
+            onRestore={restoreSession}
+            onDismiss={dismissSession}
+          />
         )}
-      </main>
 
-      {/* Restore session modal */}
-      {hasSavedSession && savedSessionInfo && (
-        <RestoreSessionModal
-          pdfFileName={savedSessionInfo.pdfFileName}
-          timestamp={savedSessionInfo.timestamp}
-          onRestore={restoreSession}
-          onDismiss={dismissSession}
-        />
-      )}
-
-      {/* Toast notifications */}
-      {notifications.length > 0 && (
-        <div className="toast-container">
-          {notifications.map((n) => (
-            <div
-              key={n.id}
-              className={`toast toast-${n.level}`}
-              onClick={() => removeNotification(n.id)}
-            >
-              {n.message}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        {/* Toast notifications */}
+        {notifications.length > 0 && (
+          <div className="toast-container" role="status" aria-live="polite" aria-atomic="true">
+            {notifications.map((n) => (
+              <div
+                key={n.id}
+                className={`toast toast-${n.level}`}
+                onClick={() => removeNotification(n.id)}
+                aria-label={`${n.level} notification`}
+              >
+                {n.message}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }

@@ -18,6 +18,8 @@ export function ProjectsPage() {
   const setFieldBindings = useAppStore((s) => s.setFieldBindings);
   const addNotification = useAppStore((s) => s.addNotification);
   const setCurrentProjectId = useAppStore((s) => s.setCurrentProjectId);
+  const setValidationRules = useAppStore((s) => s.setValidationRules);
+  const setConditionalRules = useAppStore((s) => s.setConditionalRules);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,15 +49,33 @@ export function ProjectsPage() {
     try {
       const proj = await StorageService.getProject(id);
       if (!proj) throw new Error('Project not found in DB');
-      
+      // Normalize basePdf: support stored ArrayBuffer or base64 string
+      let basePdfBuf: ArrayBuffer | null = null;
+      if (!proj.basePdf) {
+        basePdfBuf = null;
+      } else if (typeof proj.basePdf === 'string') {
+        basePdfBuf = base64ToArrayBuffer(proj.basePdf as string);
+      } else if (proj.basePdf instanceof ArrayBuffer) {
+        basePdfBuf = proj.basePdf as ArrayBuffer;
+      } else if (proj.basePdf instanceof Uint8Array) {
+        basePdfBuf = (proj.basePdf as Uint8Array).buffer;
+      }
+
       setPdfFileName(proj.pdfFileName);
-      setBasePdfBuffer(proj.basePdf as ArrayBuffer);
+      if (basePdfBuf) {
+        setBasePdfBuffer(basePdfBuf);
+      } else {
+        setBasePdfBuffer(null as any);
+      }
+
       setPdfmeTemplate({
-        basePdf: proj.basePdf as ArrayBuffer,
+        basePdf: basePdfBuf,
         schemas: proj.templateSchemas as any,
       });
       setSchemaFields(proj.schemaFields as any);
       setFieldBindings(proj.fieldBindings as any);
+      setValidationRules((proj.validationRules as any) ?? []);
+      setConditionalRules((proj.conditionalRules as any) ?? []);
       setCurrentProjectId(proj.id);
       
       addNotification({ message: `Loaded project: ${proj.name}`, level: 'success' });
@@ -160,6 +180,28 @@ export function ProjectsPage() {
       loadProjects();
     } catch (err) {
       addNotification({ message: 'Failed to duplicate project', level: 'error' });
+    }
+  };
+
+  const handleRestoreSnapshot = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const proj = await StorageService.getProject(id);
+      if (!proj || !proj.snapshots || proj.snapshots.length === 0) {
+        addNotification({ message: 'No snapshots available for this project', level: 'warning' });
+        return;
+      }
+
+      const latest = proj.snapshots[proj.snapshots.length - 1];
+      proj.templateSchemas = latest.templateSchemas;
+      proj.schemaFields = latest.schemaFields;
+      proj.fieldBindings = latest.fieldBindings;
+      proj.lastModified = Date.now();
+      await StorageService.saveProject(proj);
+      addNotification({ message: 'Restored latest snapshot', level: 'success' });
+      loadProjects();
+    } catch {
+      addNotification({ message: 'Failed to restore snapshot', level: 'error' });
     }
   };
 
@@ -287,6 +329,13 @@ export function ProjectsPage() {
                       title="Export Project"
                     >
                       <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleRestoreSnapshot(p.id, e)}
+                      className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                      title="Restore latest snapshot"
+                    >
+                      <Clock className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={(e) => handleDeleteProject(p.id, e)}
