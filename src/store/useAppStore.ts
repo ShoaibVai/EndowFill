@@ -127,20 +127,20 @@ export const useAppStore = create<AppState>((set) => ({
   currentPageIndex: 0,
   setCurrentPageIndex: (i: number) => set({ currentPageIndex: i }),
   addPage: () => set((s) => {
-    const tpl = s.pdfmeTemplate || { basePdf: null, schemas: [] } as any;
-    const schemas = Array.isArray(tpl.schemas) ? [...tpl.schemas, {}] : [{}];
-    const newTpl = { ...tpl, schemas } as any;
+    const tpl = s.pdfmeTemplate ?? { basePdf: s.basePdfBuffer, schemas: [] };
+    const schemas = [...tpl.schemas, {}];
+    const newTpl = { ...tpl, schemas };
     return { pdfmeTemplate: newTpl, hasUnsavedChanges: true };
   }),
   removePage: () => set((s) => {
     const tpl = s.pdfmeTemplate;
-    if (!tpl || !Array.isArray(tpl.schemas) || tpl.schemas.length === 0) return {} as any;
+    if (!tpl || tpl.schemas.length === 0) return {};
     const idx = s.currentPageIndex || 0;
     const schemas = tpl.schemas.slice();
     schemas.splice(idx, 1);
-    const newTpl = { ...tpl, schemas } as any;
+    const newTpl = { ...tpl, schemas };
     const nextIndex = Math.max(0, Math.min(idx, schemas.length - 1));
-    return { pdfmeTemplate: newTpl, currentPageIndex: nextIndex, hasUnsavedChanges: true } as any;
+    return { pdfmeTemplate: newTpl, currentPageIndex: nextIndex, hasUnsavedChanges: true };
   }),
 
   // -- Excel Data --

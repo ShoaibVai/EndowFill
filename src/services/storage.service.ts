@@ -5,13 +5,13 @@ const DB_NAME = 'pdf-template-master-db';
 const STORE_NAME = 'projects';
 const DB_VERSION = 1;
 
-interface PDFProject {
+export interface PDFProject {
   id: string;
   name: string;
   description?: string;
   lastModified: number;
   pdfFileName: string;
-  basePdf: ArrayBuffer | string; // Large payload
+  basePdf: ArrayBuffer | Uint8Array | string; // Large payload
   templateSchemas: unknown;
   schemaFields: unknown;
   fieldBindings: unknown;
@@ -95,8 +95,9 @@ export const StorageService = {
       
       // Strip basePdf to save memory in lists
       return all.map((p) => {
-        const { basePdf, ...rest } = p;
-        return rest;
+        const rest: Partial<PDFProject> = { ...p };
+        delete rest.basePdf;
+        return rest as Omit<PDFProject, 'basePdf'>;
       });
     } catch (error) {
       console.error('[StorageService] Failed to list projects', error);

@@ -13,7 +13,7 @@ export function ExcelUploader() {
   const setExcelRows = useAppStore((s) => s.setExcelRows);
   const setExcelFileName = useAppStore((s) => s.setExcelFileName);
 
-  const handleFile = async (file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     if (!file.name.match(/\.(xlsx|csv)$/i)) {
       setError('Please upload a valid .xlsx or .csv file');
       return;
@@ -34,13 +34,14 @@ export function ExcelUploader() {
       setExcelColumns(columns);
       setExcelRows(rows);
       setExcelFileName(file.name);
-    } catch (err: any) {
-      setError(err.message || 'Failed to parse Excel file');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to parse Excel file';
+      setError(message);
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setExcelColumns, setExcelRows, setExcelFileName]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -48,7 +49,7 @@ export function ExcelUploader() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0]);
     }
-  }, []);
+  }, [handleFile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

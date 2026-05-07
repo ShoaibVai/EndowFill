@@ -45,7 +45,7 @@ export type ISchemaPage = Record<string, ISchemaField>;
 /** The full pdfme template object passed to/from the Designer. */
 export interface IPdfmeTemplate {
   /** Base PDF as ArrayBuffer or base64 string */
-  basePdf: ArrayBuffer | string;
+  basePdf: ArrayBuffer | string | null;
   /** One entry per page → each entry is a record of field name → properties */
   schemas: ISchemaPage[];
   /** Columns metadata for pdfme Designer */

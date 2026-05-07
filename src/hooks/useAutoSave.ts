@@ -28,24 +28,23 @@ export function useAutoSave() {
   const setLastSavedAt = useAppStore((s) => s.setLastSavedAt);
   const setHasUnsavedChanges = useAppStore((s) => s.setHasUnsavedChanges);
 
-  const [hasSavedSession, setHasSavedSession] = useState(false);
-  const [savedSessionInfo, setSavedSessionInfo] = useState<SavedSession | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Check for existing saved session on mount
-  useEffect(() => {
+  const [savedSessionInfo, setSavedSessionInfo] = useState<SavedSession | null>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed: SavedSession = JSON.parse(raw);
-        setHasSavedSession(true);
-        setSavedSessionInfo(parsed);
-      }
+      return raw ? (JSON.parse(raw) as SavedSession) : null;
     } catch {
-      // Corrupted data — ignore
-      localStorage.removeItem(STORAGE_KEY);
+      if (typeof localStorage?.removeItem === 'function') {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+          // ignore storage errors in test environments
+        }
+      }
+      return null;
     }
-  }, []);
+  });
+  const [hasSavedSession, setHasSavedSession] = useState(() => savedSessionInfo !== null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounced save
   useEffect(() => {

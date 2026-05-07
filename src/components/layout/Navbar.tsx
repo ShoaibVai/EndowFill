@@ -2,15 +2,17 @@
  * Navbar.tsx — Top navigation bar with branding and status indicators.
  */
 
-import { FileText, Save, Clock, Database, HardDrive } from 'lucide-react';
+import { FileText, Save, Clock, Database, HardDrive, HelpCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { StorageService } from '../../services/storage.service';
 import { ThemeToggle } from '../settings/ThemeToggle';
+import { useHelpTour } from '../../hooks/useHelpTour';
 
 export function Navbar() {
   const lastSavedAt = useAppStore((s) => s.lastSavedAt);
   const hasUnsavedChanges = useAppStore((s) => s.hasUnsavedChanges);
   const pdfFileName = useAppStore((s) => s.pdfFileName);
+  const { startTour } = useHelpTour();
   
   const setPdfFileName = useAppStore((s) => s.setPdfFileName);
   const setPdfmeTemplate = useAppStore((s) => s.setPdfmeTemplate);
@@ -65,7 +67,7 @@ export function Navbar() {
       });
       setCurrentProjectId(idToSave);
       addNotification({ message: 'Project saved successfully to DB!', level: 'success' });
-    } catch (err) {
+    } catch {
       addNotification({ message: 'Failed to save project', level: 'error' });
     }
   };
@@ -165,6 +167,9 @@ export function Navbar() {
         </button>
         <button onClick={loadTestData} className="btn btn-ghost btn-sm text-xs border border-indigo-200">
           <Database className="w-3.5 h-3.5" /> Test Data
+        </button>
+        <button onClick={startTour} className="btn btn-ghost btn-sm btn-icon text-xs" title="Start Guided Tour">
+          <HelpCircle className="w-4 h-4" />
         </button>
         <ThemeToggle />
       </div>

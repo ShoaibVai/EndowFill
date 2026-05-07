@@ -1,12 +1,16 @@
 import { useCallback, useRef } from 'react';
 import { zipSync } from 'fflate';
 import { useAppStore } from '../store/useAppStore';
-import type { GenerateJobData, GenerateJobResult } from '../workers/pdfGenerator.worker';
-import { StorageService } from '../services/storage.service';
+import type { GenerateJobData, GenerateJobResult, IFieldValidationError } from '../workers/pdfGenerator.worker';
+import { StorageService, type PDFProject } from '../services/storage.service';
 import { arrayBufferToBase64 } from '../utils/bufferUtils';
 
 // Define the worker script import for Vite
 import PdfWorker from '../workers/pdfGenerator.worker?worker';
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
 
 export function useGenerationEngine() {
   const pdfmeTemplate = useAppStore((s) => s.pdfmeTemplate);
@@ -47,6 +51,58 @@ export function useGenerationEngine() {
     worker.postMessage(job);
     cursorRef.current += 1;
   }, [setGenerationJob]);
+
+  const finishGeneration = useCallback(async (jobId: string) => {
+    // Terminate workers
+    workersRef.current.forEach((w) => w.terminate());
+    workersRef.current = [];
+
+    const prev = useAppStore.getState().generationJob;
+    if (prev && prev.id === jobId) {
+      setGenerationJob({ ...prev, status: 'done', completedAt: Date.now(), etaMs: 0 });
+    }
+
+    // Create ZIP
+    try {
+      const zipBuffer = zipSync(buffersRef.current);
+      const zipArrayBuffer = toArrayBuffer(zipBuffer);
+      const blob = new Blob([zipArrayBuffer], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Generated_PDFs_${new Date().getTime()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addNotification({ message: 'ZIP download started successfully!', level: 'success' });
+
+      // Also save generation metadata to current project if available
+      const currentProjectId = useAppStore.getState().currentProjectId;
+      if (currentProjectId) {
+        try {
+          const project = await StorageService.getProject(currentProjectId);
+          const entry = {
+            id: `gen-${Date.now()}`,
+            name: `Generated_PDFs_${Date.now()}.zip`,
+            createdAt: Date.now(),
+            zipBase64: arrayBufferToBase64(zipArrayBuffer),
+            count: Object.keys(buffersRef.current).length,
+          };
+          if (project) {
+            project.generationOutputs = project.generationOutputs || [];
+            project.generationOutputs.push(entry);
+            await StorageService.saveProject(project as PDFProject);
+          }
+        } catch (e) {
+          console.warn('Failed to save generation metadata to project', e);
+        }
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown ZIP creation error';
+      addNotification({ message: `Failed to create ZIP: ${message}`, level: 'error' });
+    }
+  }, [setGenerationJob, addNotification]);
 
   const startGeneration = useCallback((filenamePattern: string) => {
     if (!pdfmeTemplate || excelRows.length === 0 || fieldBindings.length === 0) {
@@ -138,10 +194,16 @@ export function useGenerationEngine() {
 
       worker.onmessage = (e: MessageEvent<GenerateJobResult>) => {
         const result = e.data;
-        completedCount++;
+        completedCountRef.current += 1;
 
-        if (result.error) {
-          console.error(`Row ${result.rowIndex} failed:`, result.error);
+        const rowError = result.error
+          ? (typeof result.error === 'string'
+            ? result.error
+            : (result.error as IFieldValidationError).message)
+          : undefined;
+
+        if (rowError) {
+          console.error(`Row ${result.rowIndex} failed:`, rowError);
         } else if (result.pdfBuffer) {
           buffersRef.current[result.filename] = result.pdfBuffer;
         }
@@ -152,9 +214,9 @@ export function useGenerationEngine() {
           const newRows = [...prev.rows];
           newRows[result.rowIndex] = {
             ...newRows[result.rowIndex],
-            status: result.error ? 'failed' : 'done',
+            status: rowError ? 'failed' : 'done',
             filename: result.filename,
-            error: result.error,
+            error: rowError,
           };
           
           const elapsedMs = prev.startedAt ? Date.now() - prev.startedAt : 0;
@@ -194,57 +256,8 @@ export function useGenerationEngine() {
     setGenerationJob,
     addNotification,
     dispatchNext,
+    finishGeneration,
   ]);
-
-  const finishGeneration = useCallback(async (jobId: string) => {
-    // Terminate workers
-    workersRef.current.forEach((w) => w.terminate());
-    workersRef.current = [];
-
-    const prev = useAppStore.getState().generationJob;
-    if (prev && prev.id === jobId) {
-      setGenerationJob({ ...prev, status: 'done', completedAt: Date.now(), etaMs: 0 });
-    }
-
-    // Create ZIP
-    try {
-      const zipBuffer = zipSync(buffersRef.current as any);
-      const blob = new Blob([zipBuffer as unknown as BlobPart], { type: 'application/zip' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Generated_PDFs_${new Date().getTime()}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      addNotification({ message: 'ZIP download started successfully!', level: 'success' });
-
-      // Also save generation metadata to current project if available
-      const currentProjectId = useAppStore.getState().currentProjectId;
-      if (currentProjectId) {
-        try {
-          const project = await StorageService.getProject(currentProjectId);
-          const entry = {
-            id: `gen-${Date.now()}`,
-            name: `Generated_PDFs_${Date.now()}.zip`,
-            createdAt: Date.now(),
-            zipBase64: arrayBufferToBase64((zipBuffer as Uint8Array).buffer),
-            count: Object.keys(buffersRef.current).length,
-          };
-          if (project) {
-            project.generationOutputs = project.generationOutputs || [];
-            project.generationOutputs.push(entry);
-            await StorageService.saveProject(project as any);
-          }
-        } catch (e) {
-          console.warn('Failed to save generation metadata to project', e);
-        }
-      }
-    } catch (e: any) {
-      addNotification({ message: `Failed to create ZIP: ${e.message}`, level: 'error' });
-    }
-  }, [setGenerationJob, addNotification]);
 
   const cancelGeneration = useCallback(() => {
     pausedRef.current = false;
@@ -284,7 +297,7 @@ export function useGenerationEngine() {
       addNotification({ message: 'PDF buffer not available for this row yet', level: 'warning' });
       return;
     }
-    const blob = new Blob([buf], { type: 'application/pdf' });
+    const blob = new Blob([toArrayBuffer(buf)], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

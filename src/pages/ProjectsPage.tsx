@@ -1,11 +1,26 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { FolderKanban, Plus, Clock, FileText, Trash2, Download, Upload, Copy, Edit2, Check, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { StorageService } from '../services/storage.service';
+import { StorageService, type PDFProject } from '../services/storage.service';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/bufferUtils';
+import type { ISchemaPage } from '../types/pdfme.types';
+
+type ProjectListItem = Omit<PDFProject, 'basePdf'>;
+
+const createProjectId = () => `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+function toArrayBuffer(value: PDFProject['basePdf']): ArrayBuffer {
+  if (value instanceof ArrayBuffer) {
+    return value;
+  }
+  if (value instanceof Uint8Array) {
+    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer;
+  }
+  return base64ToArrayBuffer(value);
+}
 
 export function ProjectsPage() {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -23,22 +38,39 @@ export function ProjectsPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadProjects = async () => {
-    setIsLoading(true);
-    const list = await StorageService.listProjects();
-    setProjects(list);
-    setIsLoading(false);
-  };
+  const loadProjects = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
+    try {
+      const list = await StorageService.listProjects();
+      setProjects(list);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    loadProjects();
+    let isMounted = true;
+
+    void StorageService.listProjects().then((list) => {
+      if (!isMounted) {
+        return;
+      }
+      setProjects(list);
+      setIsLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleCreateNew = () => {
     // Clear current store state
     setPdfFileName('');
-    setPdfmeTemplate(null as any);
-    setBasePdfBuffer(null as any);
+    setPdfmeTemplate(null);
+    setBasePdfBuffer(null);
     setSchemaFields([]);
     setFieldBindings([]);
     setCurrentProjectId(null);
@@ -50,37 +82,24 @@ export function ProjectsPage() {
       const proj = await StorageService.getProject(id);
       if (!proj) throw new Error('Project not found in DB');
       // Normalize basePdf: support stored ArrayBuffer or base64 string
-      let basePdfBuf: ArrayBuffer | null = null;
-      if (!proj.basePdf) {
-        basePdfBuf = null;
-      } else if (typeof proj.basePdf === 'string') {
-        basePdfBuf = base64ToArrayBuffer(proj.basePdf as string);
-      } else if (proj.basePdf instanceof ArrayBuffer) {
-        basePdfBuf = proj.basePdf as ArrayBuffer;
-      } else if (proj.basePdf instanceof Uint8Array) {
-        basePdfBuf = (proj.basePdf as Uint8Array).buffer;
-      }
+      const basePdfBuf = toArrayBuffer(proj.basePdf);
 
       setPdfFileName(proj.pdfFileName);
-      if (basePdfBuf) {
-        setBasePdfBuffer(basePdfBuf);
-      } else {
-        setBasePdfBuffer(null as any);
-      }
+      setBasePdfBuffer(basePdfBuf);
 
       setPdfmeTemplate({
         basePdf: basePdfBuf,
-        schemas: proj.templateSchemas as any,
+        schemas: proj.templateSchemas as ISchemaPage[],
       });
-      setSchemaFields(proj.schemaFields as any);
-      setFieldBindings(proj.fieldBindings as any);
-      setValidationRules((proj.validationRules as any) ?? []);
-      setConditionalRules((proj.conditionalRules as any) ?? []);
+      setSchemaFields(proj.schemaFields as Parameters<typeof setSchemaFields>[0]);
+      setFieldBindings(proj.fieldBindings as Parameters<typeof setFieldBindings>[0]);
+      setValidationRules((proj.validationRules as Parameters<typeof setValidationRules>[0]) ?? []);
+      setConditionalRules((proj.conditionalRules as Parameters<typeof setConditionalRules>[0]) ?? []);
       setCurrentProjectId(proj.id);
       
       addNotification({ message: `Loaded project: ${proj.name}`, level: 'success' });
       setActiveTab('editor');
-    } catch (e) {
+    } catch {
       addNotification({ message: 'Failed to open project', level: 'error' });
     }
   };
@@ -104,6 +123,13 @@ export function ProjectsPage() {
       let base64Pdf = proj.basePdf;
       if (proj.basePdf instanceof ArrayBuffer) {
         base64Pdf = arrayBufferToBase64(proj.basePdf);
+      } else if (proj.basePdf instanceof Uint8Array) {
+        base64Pdf = arrayBufferToBase64(
+          proj.basePdf.buffer.slice(
+            proj.basePdf.byteOffset,
+            proj.basePdf.byteOffset + proj.basePdf.byteLength
+          ) as ArrayBuffer
+        );
       }
 
       const exportPayload = {
@@ -125,7 +151,7 @@ export function ProjectsPage() {
       URL.revokeObjectURL(url);
       
       addNotification({ message: 'Project exported successfully', level: 'success' });
-    } catch (err) {
+    } catch {
       addNotification({ message: 'Failed to export project', level: 'error' });
     }
   };
@@ -145,7 +171,7 @@ export function ProjectsPage() {
       const proj = payload.project;
       
       // Ensure it gets a new ID so we don't accidentally overwrite if they import the same project twice
-      proj.id = `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      proj.id = createProjectId();
       proj.lastModified = Date.now();
       
       if (typeof proj.basePdf === 'string') {
@@ -155,7 +181,7 @@ export function ProjectsPage() {
       await StorageService.saveProject(proj);
       addNotification({ message: 'Project imported successfully', level: 'success' });
       loadProjects();
-    } catch (err) {
+    } catch {
       addNotification({ message: 'Failed to import project. Ensure it is a valid .pdftemplate file.', level: 'error' });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -170,7 +196,7 @@ export function ProjectsPage() {
 
       const duplicate = {
         ...proj,
-        id: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: createProjectId(),
         name: `${proj.name} (Copy)`,
         lastModified: Date.now(),
       };
@@ -178,7 +204,7 @@ export function ProjectsPage() {
       await StorageService.saveProject(duplicate);
       addNotification({ message: 'Project duplicated', level: 'success' });
       loadProjects();
-    } catch (err) {
+    } catch {
       addNotification({ message: 'Failed to duplicate project', level: 'error' });
     }
   };
@@ -205,13 +231,13 @@ export function ProjectsPage() {
     }
   };
 
-  const startEditing = (p: any, e: React.MouseEvent) => {
+  const startEditing = (p: ProjectListItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(p.id);
     setEditName(p.name);
   };
 
-  const saveRename = async (p: any, e: React.MouseEvent | React.KeyboardEvent) => {
+  const saveRename = async (p: ProjectListItem, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     if (!editName.trim()) {
       setEditingId(null);
@@ -227,7 +253,7 @@ export function ProjectsPage() {
         addNotification({ message: 'Project renamed', level: 'success' });
         loadProjects();
       }
-    } catch (err) {
+    } catch {
       addNotification({ message: 'Failed to rename project', level: 'error' });
     }
     setEditingId(null);

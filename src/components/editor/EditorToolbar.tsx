@@ -15,10 +15,10 @@ export function EditorToolbar() {
   const setPdfFileName = useAppStore((s) => s.setPdfFileName);
   const schemaFields = useAppStore((s) => s.schemaFields);
   const pdfFileName = useAppStore((s) => s.pdfFileName);
-  const currentPageIndex = useAppStore((s) => (s as any).currentPageIndex || 0);
-  const setCurrentPageIndex = useAppStore((s) => (s as any).setCurrentPageIndex) as (i: number) => void;
-  const addPage = useAppStore((s) => (s as any).addPage) as () => void;
-  const removePage = useAppStore((s) => (s as any).removePage) as () => void;
+  const currentPageIndex = useAppStore((s) => s.currentPageIndex || 0);
+  const setCurrentPageIndex = useAppStore((s) => s.setCurrentPageIndex);
+  const addPage = useAppStore((s) => s.addPage);
+  const removePage = useAppStore((s) => s.removePage);
 
   const handlePdfUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

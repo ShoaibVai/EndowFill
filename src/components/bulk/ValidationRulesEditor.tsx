@@ -1,11 +1,10 @@
-import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { IValidationRule, ISchemaField } from '../../types/pdfme.types';
 
 export function ValidationRulesEditor() {
   const schemaFields = useAppStore((s) => s.schemaFields) as ISchemaField[];
   const validationRules = useAppStore((s) => s.validationRules) as IValidationRule[];
-  const setValidationRules = useAppStore((s) => (s as any).setValidationRules) as (r: IValidationRule[]) => void;
+  const setValidationRules = useAppStore((s) => s.setValidationRules);
 
   const getRuleFor = (fieldId: string): IValidationRule => {
     return validationRules.find((r) => r.fieldId === fieldId) || { fieldId, required: false } as IValidationRule;

@@ -3,8 +3,8 @@
  * derived reactively from the pdfme Designer's schema.
  */
 
-import { useState } from 'react';
-import { Search, ListFilter, FileSpreadsheet } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, ListFilter, FileSpreadsheet, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { FieldListItem } from '../ui/FieldListItem';
 import { EmptyState } from '../ui/EmptyState';
@@ -13,10 +13,26 @@ export function EditorSidebar() {
   const schemaFields = useAppStore((s) => s.schemaFields);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const filtered = schemaFields.filter((f) =>
     f.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const groupedFields = useMemo(() => {
+    const groups: Record<string, typeof schemaFields> = {};
+    filtered.forEach((field) => {
+      const parts = field.name.split('.');
+      const groupName = parts.length > 1 ? parts[0] : 'General';
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(field);
+    });
+    return groups;
+  }, [filtered]);
+
+  const toggleGroup = (group: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
+  };
 
   return (
     <aside
@@ -85,16 +101,45 @@ export function EditorSidebar() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
-            {filtered.map((field, i) => (
-              <FieldListItem
-                key={field.name}
-                field={field}
-                index={i}
-                isSelected={selectedIndex === i}
-                onClick={() => setSelectedIndex(i === selectedIndex ? null : i)}
-              />
-            ))}
+          <div className="flex flex-col gap-2">
+            {Object.entries(groupedFields).map(([groupName, fields]) => {
+              const isCollapsed = collapsedGroups[groupName];
+              return (
+                <div key={groupName} className="flex flex-col gap-1">
+                  <div
+                    className="flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded-md hover:bg-surface-50 transition-colors"
+                    onClick={() => toggleGroup(groupName)}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="w-4 h-4 text-surface-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-surface-400" />
+                    )}
+                    <Folder className="w-3.5 h-3.5 text-brand-400" />
+                    <span className="text-xs font-semibold text-surface-700 select-none">
+                      {groupName} <span className="text-surface-400 font-normal">({fields.length})</span>
+                    </span>
+                  </div>
+                  {!isCollapsed && (
+                    <div className="flex flex-col gap-1 pl-4 border-l border-surface-200 ml-3">
+                      {fields.map((field) => {
+                        // Find global index for selection
+                        const globalIndex = schemaFields.findIndex((f) => f.name === field.name);
+                        return (
+                          <FieldListItem
+                            key={field.name}
+                            field={field}
+                            index={globalIndex}
+                            isSelected={selectedIndex === globalIndex}
+                            onClick={() => setSelectedIndex(globalIndex === selectedIndex ? null : globalIndex)}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,12 +1,19 @@
 import { generate } from '@pdfme/generator';
 import { text, image, signature, barcodes, checkbox } from '@pdfme/schemas';
+import type { IConditionalRule, IPdfmeTemplate, IValidationRule } from '../types/pdfme.types';
+import type { GenerateProps } from '@pdfme/common';
 // Cache bust: 12345
+
+interface WorkerTemplate extends IPdfmeTemplate {
+  validationRules?: IValidationRule[];
+  conditionalRules?: IConditionalRule[];
+}
 
 // Message sent to the worker
 export interface GenerateJobData {
   jobId: string;
   rowIndex: number;
-  template: any; // IPdfmeTemplate
+  template: WorkerTemplate;
   input: Record<string, string>;
   filename: string;
 }
@@ -16,7 +23,7 @@ export interface IFieldValidationError {
   fieldId?: string;
   message: string;
   code?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface GenerateJobResult {
@@ -61,7 +68,7 @@ self.onmessage = async (event: MessageEvent<GenerateJobData>) => {
           }
         }
         effectiveTemplate = { ...template, schemas: schemasCopy };
-      } catch (err) {
+      } catch {
         // If conditional rule processing fails, continue with original template
         effectiveTemplate = template;
       }
@@ -96,8 +103,36 @@ self.onmessage = async (event: MessageEvent<GenerateJobData>) => {
       }
     }
 
+    // Convert our lightweight template shape into the strict shape expected by @pdfme/generator
+    const toArrayBuffer = (bytes: Uint8Array) =>
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+
+    const normalizeSchemas = (schemas: unknown): GenerateProps['template']['schemas'] => {
+      if (!schemas) return [] as GenerateProps['template']['schemas'];
+      if (Array.isArray(schemas) && schemas.length > 0 && Array.isArray(schemas[0])) {
+        return schemas as GenerateProps['template']['schemas'];
+      }
+      if (Array.isArray(schemas)) {
+        return schemas.map((page) => {
+          const p = page as Record<string, unknown>;
+          return Object.entries(p).map(([name, props]) => ({ name, ...(props as Record<string, unknown>) } as Record<string, unknown>));
+        }) as GenerateProps['template']['schemas'];
+      }
+      return [[{ name: 'field1', type: 'text', position: { x: 0, y: 0 }, width: 50, height: 10 }]] as GenerateProps['template']['schemas'];
+    };
+
+    const normalizeBasePdf = (b: IPdfmeTemplate['basePdf']) => {
+      if (b instanceof Uint8Array) return toArrayBuffer(b);
+      return b as ArrayBuffer | string | undefined | object | null;
+    };
+
+    const adaptedTemplate: GenerateProps['template'] = {
+      schemas: normalizeSchemas(effectiveTemplate.schemas),
+      basePdf: normalizeBasePdf(effectiveTemplate.basePdf),
+    } as GenerateProps['template'];
+
     const pdfBuffer = await generate({
-      template: effectiveTemplate,
+      template: adaptedTemplate,
       inputs: [input],
       plugins: {
         text,
@@ -111,18 +146,20 @@ self.onmessage = async (event: MessageEvent<GenerateJobData>) => {
 
     // Transfer the underlying ArrayBuffer if available
     if (pdfBuffer && pdfBuffer.buffer) {
-      self.postMessage(
-        { jobId, rowIndex, filename, pdfBuffer } as GenerateJobResult,
-        // @ts-ignore - transferable
-        { transfer: [pdfBuffer.buffer] }
-      );
+      const transferBuffer = pdfBuffer.buffer.slice(
+        pdfBuffer.byteOffset,
+        pdfBuffer.byteOffset + pdfBuffer.byteLength
+      ) as ArrayBuffer;
+
+      // Post the result and transfer the ArrayBuffer to the main thread
+      (self as unknown as { postMessage: (msg: GenerateJobResult, transfer?: Transferable[]) => void }).postMessage({ jobId, rowIndex, filename, pdfBuffer } as GenerateJobResult, [transferBuffer]);
     } else {
-      self.postMessage({ jobId, rowIndex, filename, pdfBuffer } as GenerateJobResult);
+      (self as unknown as { postMessage: (msg: GenerateJobResult, transfer?: Transferable[]) => void }).postMessage({ jobId, rowIndex, filename, pdfBuffer } as GenerateJobResult);
     }
-  } catch (error: any) {
+  } catch (error) {
     const errObj: IFieldValidationError = {
-      message: error?.message || 'Unknown generation error',
-      details: { stack: error?.stack },
+      message: error instanceof Error ? error.message : 'Unknown generation error',
+      details: error instanceof Error ? { stack: error.stack } : undefined,
     };
     self.postMessage({ jobId, rowIndex, filename, error: errObj } as GenerateJobResult);
   }

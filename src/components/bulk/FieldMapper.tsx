@@ -86,7 +86,6 @@ export function FieldMapper() {
       setValidationRules(Array.isArray(payload.validationRules) ? payload.validationRules : []);
       setConditionalRules(Array.isArray(payload.conditionalRules) ? payload.conditionalRules : []);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to import .pdfmap file', err);
       alert('Failed to import mapping file. Please select a valid .pdfmap export.');
     } finally {

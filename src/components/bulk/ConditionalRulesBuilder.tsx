@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { IConditionalRule, ISchemaField } from '../../types/pdfme.types';
 
 export function ConditionalRulesBuilder() {
   const schemaFields = useAppStore((s) => s.schemaFields) as ISchemaField[];
   const excelColumns = useAppStore((s) => s.excelColumns);
-  const conditionalRules = useAppStore((s) => (s as any).conditionalRules) as IConditionalRule[];
-  const setConditionalRules = useAppStore((s) => (s as any).setConditionalRules) as (r: IConditionalRule[]) => void;
+  const conditionalRules = useAppStore((s) => s.conditionalRules) as IConditionalRule[];
+  const setConditionalRules = useAppStore((s) => s.setConditionalRules);
 
   const [targetField, setTargetField] = useState('');
   const [sourceColumn, setSourceColumn] = useState('');
@@ -52,7 +52,11 @@ export function ConditionalRulesBuilder() {
           </select>
 
           <div className="flex gap-2">
-            <select value={operator} onChange={(e) => setOperator(e.target.value as any)} className="border p-1 rounded">
+            <select
+              value={operator}
+              onChange={(e) => setOperator(e.target.value as 'equals' | 'not_equals' | 'contains' | 'not_contains')}
+              className="border p-1 rounded"
+            >
               <option value="equals">equals</option>
               <option value="not_equals">not equals</option>
               <option value="contains">contains</option>

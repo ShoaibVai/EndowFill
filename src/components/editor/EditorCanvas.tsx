@@ -8,9 +8,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Designer } from '@pdfme/ui';
 import { text, image, signature, barcodes, checkbox } from '@pdfme/schemas';
+import type { Template as PdfmeTemplate } from '@pdfme/common';
 import { Upload, FileText } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import type { ISchemaField } from '../../types/pdfme.types';
+import type { IPdfmeTemplate, ISchemaField } from '../../types/pdfme.types';
 
 /**
  * Extract flat ISchemaField[] from pdfme's schema pages.
@@ -85,12 +86,29 @@ export function EditorCanvas() {
     // Clear the container
     containerRef.current.innerHTML = '';
 
-    const template: any = {
-      basePdf: basePdfBuffer,
-      schemas: [{}],
-      columns: ['field1'],
-      sampledata: [{ field1: '' }],
+    // Build an initial pdfme `Template` object from our lightweight representation.
+    const makePdfmeSchemas = (schemas: unknown): PdfmeTemplate['schemas'] => {
+      // If already in the nested-array shape, return as-is
+      if (Array.isArray(schemas) && schemas.length > 0 && Array.isArray(schemas[0])) {
+        return schemas as PdfmeTemplate['schemas'];
+      }
+
+      // Otherwise assume an array of page-records and convert to array-of-arrays
+      if (Array.isArray(schemas)) {
+        return schemas.map((page) => {
+          const p = page as Record<string, unknown>;
+          return Object.entries(p).map(([name, props]) => ({ name, ...(props as Record<string, unknown>) } as Record<string, unknown>));
+        }) as PdfmeTemplate['schemas'];
+      }
+
+      // Fallback: single empty page with a placeholder field
+      return [[{ name: 'field1', type: 'text', position: { x: 0, y: 0 }, width: 50, height: 10 }]];
     };
+
+    const template: PdfmeTemplate = {
+      basePdf: basePdfBuffer,
+      schemas: makePdfmeSchemas([{}]),
+    } as PdfmeTemplate;
 
     try {
       const designer = new Designer({
@@ -107,17 +125,30 @@ export function EditorCanvas() {
       });
 
       // Listen for schema changes via the onChangeTemplate callback
-      designer.onChangeTemplate((updatedTemplate: any) => {
-        setPdfmeTemplate({
-          basePdf: updatedTemplate.basePdf as ArrayBuffer,
-          schemas: updatedTemplate.schemas as any,
-          columns: updatedTemplate.columns as string[],
-          sampledata: updatedTemplate.sampledata as Record<string, string>[],
-        });
+      designer.onChangeTemplate((updatedTemplate: PdfmeTemplate) => {
+        // Convert the nested-array pdfme schemas back into our Record<string,ISchemaField>[] shape
+        const convertBack = (schemas: PdfmeTemplate['schemas']): Record<string, unknown>[] => {
+          return schemas.map((page) => {
+            const pageObj: Record<string, unknown> = {};
+            for (const s of page) {
+              const typed = s as Record<string, unknown> & { name?: string };
+              const name = String(typed.name ?? '');
+              const { name: _n, ...props } = typed;
+              void _n;
+              pageObj[name] = props as Record<string, unknown>;
+            }
+            return pageObj;
+          });
+        };
 
-        const fields = extractSchemaFields(
-          updatedTemplate.schemas as any
-        );
+        setPdfmeTemplate({
+          basePdf: updatedTemplate.basePdf as ArrayBuffer | string | null,
+          schemas: convertBack(updatedTemplate.schemas),
+          columns: (updatedTemplate as unknown as { columns?: string[] }).columns,
+          sampledata: (updatedTemplate as unknown as { sampledata?: Record<string, string>[] }).sampledata,
+        } as IPdfmeTemplate);
+
+        const fields = extractSchemaFields(convertBack(updatedTemplate.schemas));
         setSchemaFields(fields);
       });
 
