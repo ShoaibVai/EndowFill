@@ -59,13 +59,19 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="flex flex-col min-h-screen">
-        <Navbar />
-        <TabNav />
+      <div className="flex flex-col min-h-screen text-slate-900 dark:text-slate-50 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+        <header className="flex flex-col z-40 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+          <Navbar />
+          <TabNav />
+        </header>
 
         {/* Main content */}
-        <main className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-          <Suspense fallback={<div className="p-6 text-sm" style={{ color: 'var(--color-surface-500)' }}>Loading page...</div>}>
+        <main className="flex-1 flex flex-col min-h-0 relative">
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12 text-slate-500 animate-pulse">
+              Loading workspace...
+            </div>
+          }>
             {activeTab === 'projects' ? (
               <ErrorBoundary>
                 <ProjectsPage />

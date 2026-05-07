@@ -114,23 +114,17 @@ export function Navbar() {
   };
 
   return (
-    <nav className="glass sticky top-0 z-50 px-6 py-3 flex items-center justify-between"
-         style={{ borderBottom: '1px solid rgba(226, 232, 240, 0.8)' }}>
+    <div className="px-6 py-3 flex items-center justify-between">
       {/* Brand */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-             style={{
-               background: 'linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600))',
-               boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
-             }}>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-600 shadow-md shadow-indigo-600/30">
           <FileText className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-base font-bold"
-              style={{ color: 'var(--color-surface-900)', letterSpacing: '-0.02em' }}>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
             PDF Template Master
           </h1>
-          <p className="text-xs" style={{ color: 'var(--color-surface-400)' }}>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Design · Map · Generate
           </p>
         </div>
@@ -138,10 +132,9 @@ export function Navbar() {
 
       {/* Center — Active file */}
       {pdfFileName && (
-        <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-lg"
-             style={{ background: 'var(--color-surface-50)', border: '1px solid var(--color-surface-200)' }}>
-          <FileText className="w-3.5 h-3.5" style={{ color: 'var(--color-brand-500)' }} />
-          <span className="text-sm font-medium" style={{ color: 'var(--color-surface-700)' }}>
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <FileText className="w-4 h-4 text-indigo-500" />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             {pdfFileName}
           </span>
         </div>
@@ -150,29 +143,44 @@ export function Navbar() {
       {/* Right — Save status */}
       <div className="flex items-center gap-3">
         {hasUnsavedChanges && (
-          <span className="badge badge-warning animate-fade-in">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-fade-in">
             <Save className="w-3 h-3" />
             Unsaved
           </span>
         )}
         {lastSavedAt && !hasUnsavedChanges && (
-          <span className="flex items-center gap-1.5 text-xs"
-                style={{ color: 'var(--color-surface-400)' }}>
-            <Clock className="w-3 h-3" />
-            Saved at {formatTime(lastSavedAt)}
+          <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <Clock className="w-3.5 h-3.5" />
+            Saved {formatTime(lastSavedAt)}
           </span>
         )}
-        <button onClick={saveToIndexedDB} className="btn btn-primary btn-sm text-xs shadow-sm" disabled={!basePdfBuffer}>
-          <HardDrive className="w-3.5 h-3.5" /> Save to DB
+        <button 
+          onClick={saveToIndexedDB} 
+          disabled={!basePdfBuffer}
+          aria-label="Save project to database"
+          className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <HardDrive className="w-4 h-4" /> Save
         </button>
-        <button onClick={loadTestData} className="btn btn-ghost btn-sm text-xs border border-indigo-200">
-          <Database className="w-3.5 h-3.5" /> Test Data
+        <button 
+          onClick={loadTestData} 
+          aria-label="Load test data"
+          className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+        >
+          <Database className="w-4 h-4" /> Test Data
         </button>
-        <button onClick={startTour} className="btn btn-ghost btn-sm btn-icon text-xs" title="Start Guided Tour">
-          <HelpCircle className="w-4 h-4" />
+        <button 
+          onClick={startTour} 
+          aria-label="Start guided tour"
+          title="Start Guided Tour"
+          className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+        >
+          <HelpCircle className="w-5 h-5" />
         </button>
-        <ThemeToggle />
+        <div className="ml-1 pl-3 border-l border-slate-200 dark:border-slate-700">
+          <ThemeToggle />
+        </div>
       </div>
-    </nav>
+    </div>
   );
 }

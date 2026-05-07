@@ -1,23 +1,18 @@
 @import "tailwindcss";
 
-/* ===================================================================
-   PDF Template Master — Design System
-   =================================================================== */
-
-/* Custom theme tokens via Tailwind v4 @theme */
 @theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
+  /* Colors */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
 
-  --color-surface-0: #ffffff;
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
   --color-surface-200: #e2e8f0;
@@ -30,64 +25,59 @@
   --color-surface-900: #0f172a;
   --color-surface-950: #020617;
 
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-error-50: #fef2f2;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
 
+  --color-success-50: #ecfdf5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+
+  /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
+  /* Shadows */
   --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
-  --shadow-elevated: 0 20px 60px rgba(0, 0, 0, 0.12);
+  --shadow-elevated: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 /* ===================================================================
    Base Styles
    =================================================================== */
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@layer base {
+  :root {
+    --bg-app: var(--color-surface-50);
+    --bg-surface: #ffffff;
+    --text-main: var(--color-surface-900);
+    --text-muted: var(--color-surface-500);
+    --border-subtle: var(--color-surface-200);
+  }
 
-html {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  :root[data-theme='dark'] {
+    --bg-app: var(--color-surface-950);
+    --bg-surface: var(--color-surface-900);
+    --text-main: var(--color-surface-50);
+    --text-muted: var(--color-surface-400);
+    --border-subtle: var(--color-surface-800);
+  }
 
-/* Theme override tokens */
-:root[data-theme='dark'] {
-  --color-surface-0: #0b1220;
-  --color-surface-50: #111827;
-  --color-surface-100: #1f2937;
-  --color-surface-200: #374151;
-  --color-surface-300: #4b5563;
-  --color-surface-400: #9ca3af;
-  --color-surface-500: #d1d5db;
-  --color-surface-600: #e5e7eb;
-  --color-surface-700: #f3f4f6;
-  --color-surface-800: #f9fafb;
-  --color-surface-900: #ffffff;
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --shadow-elevated: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
 
-body {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f1f5f9 100%);
-  color: var(--color-surface-800);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-:root[data-theme='dark'] body {
-  background: radial-gradient(circle at top left, #1e1b4b 0%, #0b1220 45%, #020617 100%);
-}
-
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 /* ===================================================================
@@ -105,7 +95,11 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-surface-300);
-  border-radius: 100px;
+  border-radius: 9999px;
+}
+
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: var(--color-surface-700);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -117,7 +111,7 @@ body {
    =================================================================== */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -126,220 +120,12 @@ body {
   to   { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes slideInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50%      { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out both;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-slide-in-right {
-  animation: slideInRight 0.3s ease-out both;
-}
-
-.animate-slide-in-up {
-  animation: slideInUp 0.5s ease-out both;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* ===================================================================
-   Glassmorphism Utilities
-   =================================================================== */
-
-.glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-}
-
-:root[data-theme='dark'] .glass {
-  background: rgba(17, 24, 39, 0.72);
-  border: 1px solid rgba(75, 85, 99, 0.6);
-}
-
-.glass-subtle {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-/* ===================================================================
-   Card Style
-   =================================================================== */
-
-.card {
-  background: var(--color-surface-0);
-  border-radius: 16px;
-  border: 1px solid var(--color-surface-200);
-  box-shadow: var(--shadow-glass);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-elevated);
-}
-
-/* ===================================================================
-   Button Styles
-   =================================================================== */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 500;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  outline: none;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600));
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-700));
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-secondary {
-  background: var(--color-surface-0);
-  color: var(--color-surface-700);
-  border: 1px solid var(--color-surface-200);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.btn-secondary:hover {
-  background: var(--color-surface-50);
-  border-color: var(--color-surface-300);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-surface-600);
-}
-
-.btn-ghost:hover {
-  background: var(--color-surface-100);
-  color: var(--color-surface-800);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, var(--color-danger), #dc2626);
-  color: white;
-}
-
-.btn-danger:hover {
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: 8px;
-}
-
-.btn-lg {
-  padding: 14px 28px;
-  font-size: 16px;
-  border-radius: 12px;
-}
-
-.btn-icon {
-  padding: 8px;
-  border-radius: 8px;
-}
-
-/* ===================================================================
-   Badge Styles
-   =================================================================== */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 100px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.badge-brand {
-  background: var(--color-brand-100);
-  color: var(--color-brand-700);
-}
-
-.badge-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge-warning {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.badge-danger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-/* ===================================================================
-   pdfme Designer Overrides
-   =================================================================== */
-
-.pdfme-designer-container {
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--color-surface-200);
-  box-shadow: var(--shadow-glass);
-}
-
-.pdfme-designer-container > div {
-  border-radius: 12px;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ===================================================================
@@ -347,20 +133,19 @@ body {
    =================================================================== */
 
 .drop-zone {
-  border: 2px dashed var(--color-surface-300);
-  border-radius: 16px;
+  border: 2px dashed var(--border-subtle);
+  border-radius: 12px;
   padding: 48px 32px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+  background: transparent;
 }
 
 .drop-zone:hover,
 .drop-zone.drag-over {
-  border-color: var(--color-brand-400);
+  border-color: var(--color-primary-400);
   background: rgba(99, 102, 241, 0.04);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
 }
 
 .drop-zone.drag-over {
@@ -373,61 +158,38 @@ body {
 
 .toast-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 24px;
+  right: 24px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .toast {
-  padding: 12px 20px;
-  border-radius: 12px;
+  padding: 14px 20px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   box-shadow: var(--shadow-elevated);
-  animation: slideInRight 0.3s ease-out;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   max-width: 360px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-subtle);
 }
 
-.toast-success {
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: white;
+.toast-success { background: var(--bg-surface); color: var(--color-success-600); border-left: 4px solid var(--color-success-500); }
+.toast-error { background: var(--bg-surface); color: var(--color-error-600); border-left: 4px solid var(--color-error-500); }
+.toast-warning { background: var(--bg-surface); color: #d97706; border-left: 4px solid #f59e0b; }
+.toast-info { background: var(--bg-surface); color: var(--text-main); border-left: 4px solid var(--color-primary-500); }
+
+/* pdfme designer override */
+.pdfme-designer-container {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-.toast-error {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  color: white;
-}
-
-.toast-warning {
-  background: linear-gradient(135deg, #d97706, #f59e0b);
-  color: white;
-}
-
-.toast-info {
-  background: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-500));
-  color: white;
-}
-
-/* ===================================================================
-   Spinner
-   =================================================================== */
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-/* ===================================================================
-   Responsive helpers
-   =================================================================== */
-
-@media (max-width: 768px) {
-  .btn { padding: 8px 16px; font-size: 13px; }
-}

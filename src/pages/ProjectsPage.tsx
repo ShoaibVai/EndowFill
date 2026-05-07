@@ -260,20 +260,20 @@ export function ProjectsPage() {
   };
 
   return (
-    <div className="flex-1 p-6 animate-fade-in overflow-y-auto">
-      <div className="max-w-6xl mx-auto flex flex-col gap-8">
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in overflow-y-auto bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-7xl mx-auto flex flex-col gap-8">
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-100">
-              <FolderKanban className="w-5 h-5 text-indigo-600" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+              <FolderKanban className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold" style={{ color: 'var(--color-surface-900)' }}>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Your Projects
               </h2>
-              <p className="text-sm" style={{ color: 'var(--color-surface-400)' }}>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Manage your saved PDF templates and mappings
               </p>
             </div>
@@ -285,12 +285,19 @@ export function ProjectsPage() {
               className="hidden" 
               ref={fileInputRef} 
               onChange={handleImportFile}
+              tabIndex={-1}
             />
-            <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary shadow-sm">
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+            >
               <Upload className="w-4 h-4" />
               Import
             </button>
-            <button onClick={handleCreateNew} className="btn btn-primary shadow-md">
+            <button 
+              onClick={handleCreateNew} 
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+            >
               <Plus className="w-4 h-4" />
               New Project
             </button>
@@ -299,98 +306,120 @@ export function ProjectsPage() {
 
         {/* Grid */}
         {isLoading ? (
-          <div className="text-center py-20 text-gray-500">Loading projects...</div>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 animate-pulse">
+            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            Loading projects...
+          </div>
         ) : projects.length === 0 ? (
-          <div className="card p-12 text-center flex flex-col items-center justify-center gap-4 border-dashed border-2">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-              <FolderKanban className="w-8 h-8 text-gray-400" />
+          <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-4">
+            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center">
+              <FolderKanban className="w-8 h-8 text-slate-400 dark:text-slate-500" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">No projects yet</h3>
-              <p className="text-gray-500 max-w-sm mt-1">Create your first project to start visually designing and mapping your PDFs.</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No projects yet</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-sm mt-1">Create your first project to start visually designing and mapping your PDFs.</p>
             </div>
-            <button onClick={handleCreateNew} className="btn btn-primary mt-2">
+            <button 
+              onClick={handleCreateNew} 
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 mt-2 rounded-lg text-sm font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+            >
               Create New Project
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {projects.map((p) => (
               <div 
                 key={p.id} 
-                className="card group cursor-pointer hover:border-indigo-300 hover:shadow-lg transition-all"
+                className="group relative flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 overflow-hidden"
                 onClick={() => handleOpenProject(p.id)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenProject(p.id);
+                  }
+                }}
+                role="button"
+                aria-label={`Open project ${p.name}`}
               >
                 {/* Thumbnail placeholder */}
-                <div className="aspect-[4/3] bg-gray-50 flex flex-col items-center justify-center border-b border-gray-100 relative overflow-hidden">
-                  <FileText className="w-12 h-12 text-gray-300 mb-2" />
-                  <span className="text-xs font-mono text-gray-400">{p.pdfFileName}</span>
+                <div className="aspect-[4/3] bg-slate-50 dark:bg-slate-800/50 flex flex-col items-center justify-center border-b border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                  <FileText className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-2 transition-transform group-hover:scale-110 duration-300" />
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 px-4 truncate w-full text-center">{p.pdfFileName}</span>
                   
                   {/* Hover overlay actions */}
-                  <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
-                    <button className="btn btn-primary btn-sm shadow-xl">Open Project</button>
+                  <div className="absolute inset-0 bg-indigo-900/5 dark:bg-indigo-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+                    <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-indigo-600 shadow-sm">
+                      Open Project
+                    </span>
                   </div>
                 </div>
                 
                 {/* Info */}
-                <div className="p-4 relative">
-                  <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                     <button 
                       onClick={(e) => startEditing(p, e)}
-                      className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="Rename Project"
+                      aria-label="Rename Project"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={(e) => handleDuplicateProject(p.id, e)}
-                      className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="Duplicate Project"
+                      aria-label="Duplicate Project"
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={(e) => handleExportProject(p.id, e)}
-                      className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="Export Project"
+                      aria-label="Export Project"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={(e) => handleRestoreSnapshot(p.id, e)}
-                      className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                       title="Restore latest snapshot"
+                      aria-label="Restore latest snapshot"
                     >
-                      <Clock className="w-4 h-4" />
+                      <Clock className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={(e) => handleDeleteProject(p.id, e)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                       title="Delete Project"
+                      aria-label="Delete Project"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                   
                   {editingId === p.id ? (
-                    <div className="pr-16 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 relative z-10" onClick={e => e.stopPropagation()}>
                       <input 
                         type="text" 
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && saveRename(p, e)}
                         autoFocus
-                        className="w-full text-sm border-b-2 border-indigo-500 focus:outline-none bg-transparent"
+                        className="flex-1 w-full text-sm font-semibold bg-transparent border-b-2 border-indigo-500 focus:outline-none text-slate-900 dark:text-white px-1 py-0.5"
                       />
-                      <button onClick={(e) => saveRename(p, e)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-3 h-3" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-3 h-3" /></button>
+                      <button onClick={(e) => saveRename(p, e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded" aria-label="Save rename"><Check className="w-3.5 h-3.5" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" aria-label="Cancel rename"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   ) : (
-                    <h3 className="font-bold text-gray-800 truncate pr-28">{p.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white truncate pr-6">{p.name}</h3>
                   )}
                   
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(p.lastModified).toLocaleDateString()}</span>
+                  <div className="mt-auto pt-3 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {new Date(p.lastModified).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>

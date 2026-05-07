@@ -32,8 +32,7 @@ export function TabNav() {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   return (
-    <div className="flex items-center gap-2 px-6 py-3"
-         style={{ background: 'var(--color-surface-50)', borderBottom: '1px solid var(--color-surface-200)' }}>
+    <nav aria-label="Main Navigation" className="flex items-center gap-2 px-6 py-2 overflow-x-auto">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -42,35 +41,27 @@ export function TabNav() {
             id={`tab-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-medium
-              transition-all duration-200 cursor-pointer
+              group flex items-center gap-2.5 px-4 py-2 rounded-lg text-sm font-medium
+              transition-all duration-200 outline-none
+              focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+              dark:focus-visible:ring-offset-slate-900 whitespace-nowrap
               ${isActive
-                ? ''
-                : 'hover:bg-white/60'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
               }
             `}
-            style={
-              isActive
-                ? {
-                    background: 'linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600))',
-                    color: 'white',
-                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
-                  }
-                : {
-                    color: 'var(--color-surface-500)',
-                  }
-            }
             aria-selected={isActive}
+            aria-controls={`panel-${tab.id}`}
             role="tab"
           >
             {tab.icon}
             <span>{tab.label}</span>
-            <span className="hidden lg:inline text-xs opacity-70 ml-1">
+            <span className={`hidden lg:inline text-xs transition-opacity ${isActive ? 'opacity-80' : 'opacity-60 group-hover:opacity-100'}`}>
               — {tab.description}
             </span>
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 }
