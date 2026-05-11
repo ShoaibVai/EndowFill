@@ -31,8 +31,12 @@ export function TabNav() {
   const activeTab = useAppStore((s) => s.activeTab);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
+  if (activeTab === 'projects') {
+    return null;
+  }
+
   return (
-    <nav aria-label="Main Navigation" className="flex items-center gap-2 px-6 py-2 overflow-x-auto">
+    <nav aria-label="Main Navigation" className="flex items-center gap-1 px-4">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -41,24 +45,22 @@ export function TabNav() {
             id={`tab-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              group flex items-center gap-2.5 px-4 py-2 rounded-lg text-sm font-medium
+              group flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium
               transition-all duration-200 outline-none
               focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
               dark:focus-visible:ring-offset-slate-900 whitespace-nowrap
               ${isActive
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
+                : 'text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
               }
-            `}
+            `
+            }
             aria-selected={isActive}
             aria-controls={`panel-${tab.id}`}
             role="tab"
           >
             {tab.icon}
             <span>{tab.label}</span>
-            <span className={`hidden lg:inline text-xs transition-opacity ${isActive ? 'opacity-80' : 'opacity-60 group-hover:opacity-100'}`}>
-              — {tab.description}
-            </span>
           </button>
         );
       })}
