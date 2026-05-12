@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { Download, Trash2, RotateCcw, Clock, AlertCircle, CheckCircle, Loader, Pause } from 'lucide-react';
+import { Download, Trash2, Clock, AlertCircle, CheckCircle, Loader, Pause } from 'lucide-react';
 import { useGenerationHistory } from '../../hooks/useGenerationHistory';
 import type { IGenerationJob } from '../../types/project.types';
 
@@ -229,18 +229,6 @@ export function GenerationHistoryPanel({
                     </button>
                   )}
 
-                  {job.status === 'completed' && (
-                    <button
-                      onClick={() => {
-                        // In a real app, this would re-use the same Excel and template
-                        console.log('Rerun generation:', job.id);
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      Rerun
-                    </button>
-                  )}
 
                   <button
                     onClick={() => {

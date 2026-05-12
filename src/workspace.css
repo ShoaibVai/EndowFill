@@ -82,7 +82,7 @@
 
 .ws-card:hover {
   border-color: var(--color-primary-300);
-  box-shadow: 0 4px 20px rgba(99,102,241,0.12);
+  box-shadow: 0 6px 22px rgba(6, 182, 212, 0.16);
   transform: translateY(-2px);
 }
 
@@ -117,7 +117,7 @@
 .ws-card__icon {
   width: 40px; height: 40px;
   border-radius: 10px;
-  background: rgba(99,102,241,0.1);
+  background: rgba(6, 182, 212, 0.12);
   display: flex; align-items: center; justify-content: center;
   color: var(--color-primary-500);
 }
@@ -210,7 +210,7 @@
 .local-action-btn:hover {
   border-color: var(--color-primary-300);
   color: var(--text-main);
-  background: rgba(99,102,241,0.04);
+  background: rgba(6, 182, 212, 0.06);
 }
 
 .local-action-btn__title { display: block; font-weight: 600; font-size: 14px; }
@@ -430,7 +430,7 @@
 .tpl-card__thumb-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(99,102,241,0.08);
+  background: rgba(6, 182, 212, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -571,7 +571,7 @@
   letter-spacing: 0.05em;
 }
 
-.ws-member-role--owner  { color: #6366f1; }
+.ws-member-role--owner  { color: var(--color-primary-600); }
 .ws-member-role--editor { color: #10b981; }
 .ws-member-role--viewer { color: #94a3b8; }
 
@@ -703,7 +703,7 @@
 
 .role-option--active {
   border-color: var(--color-primary-400);
-  background: rgba(99,102,241,0.06);
+  background: rgba(6, 182, 212, 0.08);
 }
 
 .role-option__name { font-size: 14px; font-weight: 700; color: var(--text-main); }
@@ -837,7 +837,7 @@
   text-transform: capitalize;
 }
 
-.role-badge--owner  { background: rgba(99,102,241,0.1);  color: #6366f1; }
+.role-badge--owner  { background: rgba(6, 182, 212, 0.12);  color: var(--color-primary-600); }
 .role-badge--editor { background: rgba(16,185,129,0.1);  color: #10b981; }
 .role-badge--viewer { background: rgba(148,163,184,0.1); color: #94a3b8; }
 
@@ -914,7 +914,7 @@
   padding: 16px;
   border-radius: 12px;
   border: 1px solid var(--color-primary-200);
-  background: rgba(99,102,241,0.05);
+  background: rgba(6, 182, 212, 0.06);
   margin-bottom: 4px;
 }
 

@@ -16,7 +16,6 @@ import { TabNav } from './components/layout/TabNav';
 import ErrorBoundary from './components/errors/ErrorBoundary';
 import { useAppStore } from './store/useAppStore';
 import { useAutoSave } from './hooks/useAutoSave';
-import { usePreferences } from './hooks/usePreferences';
 import { WorkspaceService } from './services/workspace.service';
 import { TemplateService } from './services/template.service';
 import { base64ToArrayBuffer } from './utils/bufferUtils';
@@ -36,7 +35,6 @@ interface WorkspaceShellProps {}
 export default function WorkspaceShell({}: WorkspaceShellProps) {
   const location = useLocation();
   const activeTab = useAppStore((s) => s.activeTab);
-  const theme = useAppStore((s) => s.theme);
   const notifications = useAppStore((s) => s.notifications);
   const removeNotification = useAppStore((s) => s.removeNotification);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
@@ -53,9 +51,6 @@ export default function WorkspaceShell({}: WorkspaceShellProps) {
   const setConditionalRules = useAppStore((s) => s.setConditionalRules);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
 
-  // Sync theme to Supabase (debounced)
-  usePreferences();
-
   // Auto-save template to Supabase
   useAutoSave();
 
@@ -67,14 +62,6 @@ export default function WorkspaceShell({}: WorkspaceShellProps) {
     );
     return () => timers.forEach(clearTimeout);
   }, [notifications, removeNotification]);
-
-  // Apply theme (no localStorage needed, synced via usePreferences)
-  useEffect(() => {
-    const root = document.documentElement;
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const effective = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
-    root.setAttribute('data-theme', effective);
-  }, [theme]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -154,8 +141,8 @@ export default function WorkspaceShell({}: WorkspaceShellProps) {
 
   return (
     <ErrorBoundary>
-      <div className="flex flex-col min-h-screen text-slate-900 dark:text-slate-50 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-        <header className="flex flex-col z-40 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+      <div className="app-shell">
+        <header className="app-header">
           <Navbar />
           <TabNav />
         </header>

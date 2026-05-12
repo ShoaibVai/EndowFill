@@ -36,7 +36,7 @@ export function TabNav() {
   }
 
   return (
-    <nav aria-label="Main Navigation" className="flex items-center gap-1 px-4">
+    <nav aria-label="Main Navigation" className="tab-nav">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -44,17 +44,7 @@ export function TabNav() {
             key={tab.id}
             id={`tab-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
-            className={`
-              group flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium
-              transition-all duration-200 outline-none
-              focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
-              dark:focus-visible:ring-offset-slate-900 whitespace-nowrap
-              ${isActive
-                ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
-                : 'text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
-              }
-            `
-            }
+            className={`tab-nav__btn ${isActive ? 'tab-nav__btn--active' : ''}`}
             aria-selected={isActive}
             aria-controls={`panel-${tab.id}`}
             role="tab"

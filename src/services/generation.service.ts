@@ -230,7 +230,11 @@ export const GenerationService = {
     // This would normally be called via a service function (not direct insert)
     // For now, we skip this since it's restricted by RLS
     // In a real app, create a stored procedure to handle this
-    console.log('recordOutput called:', { jobId, outputName, rowIndex, status, errorMessage });
+    void jobId;
+    void outputName;
+    void rowIndex;
+    void status;
+    void errorMessage;
   },
 
   /**

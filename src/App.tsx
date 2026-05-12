@@ -19,6 +19,8 @@ import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from './utils/supabase';
 import { cache, SESSION_TTL } from './utils/cache';
+import { useAppStore } from './store/useAppStore';
+import { usePreferences } from './hooks/usePreferences';
 
 import { WelcomePage }   from './pages/WelcomePage';
 import { AuthPage }      from './pages/AuthPage';
@@ -111,6 +113,30 @@ function AuthRouter() {
 }
 
 export default function App() {
+  const theme = useAppStore((s) => s.theme);
+
+  // Sync theme preferences for all routes
+  usePreferences();
+
+  // Apply theme globally across public and protected pages
+  useEffect(() => {
+    const root = document.documentElement;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => {
+      const effective = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
+      root.setAttribute('data-theme', effective);
+    };
+
+    applyTheme();
+
+    if (theme === 'system') {
+      media.addEventListener('change', applyTheme);
+      return () => media.removeEventListener('change', applyTheme);
+    }
+
+    return;
+  }, [theme]);
+
   return (
     <BrowserRouter>
       <AuthRouter />

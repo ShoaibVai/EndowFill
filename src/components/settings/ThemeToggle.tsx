@@ -8,7 +8,7 @@ export function ThemeToggle() {
   return (
     <div
       className="flex items-center gap-1 rounded-lg border px-1 py-1"
-      style={{ borderColor: 'var(--color-surface-200)', background: 'var(--color-surface-0)' }}
+      style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-surface)' }}
       role="group"
       aria-label="Theme selection"
     >

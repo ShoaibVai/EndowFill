@@ -39,7 +39,7 @@ const PROFILE_CACHE_KEY = (uid: string) => `profile:${uid}`;
 const WORKSPACES_CACHE_KEY = (uid: string) => `workspaces:${uid}`;
 
 const ROLE_META = {
-  owner:  { label: 'Owner',  icon: Crown,  color: '#6366f1' },
+  owner:  { label: 'Owner',  icon: Crown,  color: 'var(--color-primary-500)' },
   editor: { label: 'Editor', icon: Edit2,  color: '#10b981' },
   viewer: { label: 'Viewer', icon: Eye,    color: '#94a3b8' },
 };
@@ -106,16 +106,12 @@ export function HomePage({ user }: HomePageProps) {
   // ── Create workspace ────────────────────────────────────────────────────
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Create workspace called, newWsName:', newWsName, 'trimmed:', newWsName.trim());
     if (!newWsName.trim()) {
-      console.log('Workspace name is empty, returning');
       return;
     }
     setCreating(true);
     try {
-      console.log('Calling WorkspaceService.createWorkspace with:', newWsName.trim());
       const ws = await WorkspaceService.createWorkspace(newWsName.trim());
-      console.log('Workspace created:', ws);
       cache.invalidate(WORKSPACES_CACHE_KEY(user.id));
       setShowCreateForm(false);
       setNewWsName('');
