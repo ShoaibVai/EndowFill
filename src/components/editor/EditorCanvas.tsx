@@ -47,6 +47,7 @@ export function EditorCanvas() {
   const designerRef = useRef<Designer | null>(null);
 
   const basePdfBuffer = useAppStore((s) => s.basePdfBuffer);
+  const pdfmeTemplate = useAppStore((s) => s.pdfmeTemplate);
   const setPdfmeTemplate = useAppStore((s) => s.setPdfmeTemplate);
   const setSchemaFields = useAppStore((s) => s.setSchemaFields);
   const setBasePdfBuffer = useAppStore((s) => s.setBasePdfBuffer);
@@ -105,9 +106,15 @@ export function EditorCanvas() {
       return [[{ name: 'field1', type: 'text', position: { x: 0, y: 0 }, width: 50, height: 10 }]];
     };
 
+    // Use existing schemas from the store if available (e.g. re-opening a saved project)
+    const existingSchemas =
+      pdfmeTemplate && Array.isArray(pdfmeTemplate.schemas) && pdfmeTemplate.schemas.length > 0
+        ? pdfmeTemplate.schemas
+        : [{}];
+
     const template: PdfmeTemplate = {
       basePdf: basePdfBuffer,
-      schemas: makePdfmeSchemas([{}]),
+      schemas: makePdfmeSchemas(existingSchemas),
     } as PdfmeTemplate;
 
     try {
@@ -163,6 +170,11 @@ export function EditorCanvas() {
         designerRef.current = null;
       }
     };
+  // NOTE: pdfmeTemplate intentionally omitted from deps — we only want to
+  // capture the schemas at the moment of initialization (when basePdfBuffer
+  // changes or first mounts). Subsequent schema changes are pushed via
+  // onChangeTemplate callback, not by re-initializing the designer.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePdfBuffer, setPdfmeTemplate, setSchemaFields]);
 
   // No PDF uploaded — show drop zone

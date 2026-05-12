@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
-import 'fake-indexeddb/auto';
 
+// Mock matchMedia for theme detection in tests
 if (!window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -18,6 +18,7 @@ if (!window.matchMedia) {
 }
 
 // Ensure a minimal localStorage implementation exists in the jsdom test environment
+// (Used by Supabase auth SDK for session persistence)
 if (typeof window.localStorage === 'undefined' || typeof window.localStorage.getItem !== 'function') {
   const store: Record<string, string> = {};
   Object.defineProperty(window, 'localStorage', {

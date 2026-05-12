@@ -2,9 +2,9 @@
  * Navbar.tsx — Top navigation bar with branding and status indicators.
  */
 
-import { FileText, Save, Clock, Database, HardDrive, HelpCircle } from 'lucide-react';
+import { FileText, Save, Clock, Database, Cloud, HelpCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { StorageService } from '../../services/storage.service';
+import { TemplateService } from '../../services/template.service';
 import { ThemeToggle } from '../settings/ThemeToggle';
 import { useHelpTour } from '../../hooks/useHelpTour';
 
@@ -30,43 +30,42 @@ export function Navbar() {
   const conditionalRules = useAppStore((s) => s.conditionalRules);
   const currentProjectId = useAppStore((s) => s.currentProjectId);
   const setCurrentProjectId = useAppStore((s) => s.setCurrentProjectId);
+  const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
+  const setHasUnsavedChanges = useAppStore((s) => s.setHasUnsavedChanges);
+  const setLastSavedAt = useAppStore((s) => s.setLastSavedAt);
 
-  const saveToIndexedDB = async () => {
-    if (!pdfmeTemplate || !basePdfBuffer) {
-      addNotification({ message: 'No active template to save', level: 'warning' });
+  const saveToCloud = async () => {
+    if (!pdfmeTemplate || !basePdfBuffer || !activeWorkspaceId) {
+      addNotification({ message: 'No active template or workspace to save', level: 'warning' });
       return;
     }
     
     try {
-      const idToSave = currentProjectId || `proj-${Date.now()}`;
-      const existing = currentProjectId ? await StorageService.getProject(currentProjectId) : undefined;
-      const snapshots = [
-        ...(existing?.snapshots ?? []),
-        {
-          id: `snap-${Date.now()}`,
-          createdAt: Date.now(),
-          templateSchemas: pdfmeTemplate.schemas,
-          schemaFields,
-          fieldBindings,
-        },
-      ].slice(-10);
-
-      await StorageService.saveProject({
-        id: idToSave,
-        name: pdfFileName || 'Untitled Project',
-        lastModified: Date.now(),
-        pdfFileName: pdfFileName || 'document.pdf',
+      const patch = {
+        name: pdfFileName || 'Untitled Template',
+        pdfFileName,
         basePdf: basePdfBuffer,
         templateSchemas: pdfmeTemplate.schemas,
         schemaFields,
         fieldBindings,
         validationRules,
         conditionalRules,
-        snapshots,
-        generationOutputs: existing?.generationOutputs ?? [],
-      });
-      setCurrentProjectId(idToSave);
-      addNotification({ message: 'Project saved successfully to DB!', level: 'success' });
+        lastModified: Date.now(),
+      };
+
+      if (currentProjectId) {
+        await TemplateService.updateTemplate(currentProjectId, patch);
+      } else {
+        const created = await TemplateService.createTemplate(activeWorkspaceId, {
+          ...patch,
+          snapshots: [],
+        });
+        setCurrentProjectId(created.id);
+      }
+      
+      setLastSavedAt(Date.now());
+      setHasUnsavedChanges(false);
+      addNotification({ message: 'Project saved successfully to Cloud!', level: 'success' });
     } catch {
       addNotification({ message: 'Failed to save project', level: 'error' });
     }
@@ -155,12 +154,12 @@ export function Navbar() {
           </span>
         )}
         <button 
-          onClick={saveToIndexedDB} 
-          disabled={!basePdfBuffer}
-          aria-label="Save project to database"
+          onClick={saveToCloud} 
+          disabled={!basePdfBuffer || !activeWorkspaceId}
+          aria-label="Save project to cloud"
           className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <HardDrive className="w-4 h-4" /> Save
+          <Cloud className="w-4 h-4" /> Save
         </button>
         <button 
           onClick={loadTestData} 

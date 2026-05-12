@@ -16,6 +16,7 @@
     "@pdfme/generator": "^6.1.1",
     "@pdfme/schemas": "^6.1.1",
     "@pdfme/ui": "^6.1.1",
+    "@supabase/supabase-js": "^2.105.4",
     "driver.js": "^1.4.0",
     "exceljs": "^4.4.0",
     "fflate": "^0.8.2",
@@ -23,6 +24,7 @@
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-router-dom": "^7.15.0",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
@@ -37,9 +39,9 @@
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "fake-indexeddb": "^6.0.0",
     "globals": "^17.5.0",
     "jsdom": "^26.1.0",
+    "supabase": "^2.98.2",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",

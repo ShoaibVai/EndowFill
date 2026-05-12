@@ -2,8 +2,7 @@ import { useCallback, useRef } from 'react';
 import { zipSync } from 'fflate';
 import { useAppStore } from '../store/useAppStore';
 import type { GenerateJobData, GenerateJobResult, IFieldValidationError } from '../workers/pdfGenerator.worker';
-import { StorageService, type PDFProject } from '../services/storage.service';
-import { arrayBufferToBase64 } from '../utils/bufferUtils';
+import { isCheckboxField, normalizeCheckboxValue } from '../utils/excelHelpers';
 
 // Define the worker script import for Vite
 import PdfWorker from '../workers/pdfGenerator.worker?worker';
@@ -17,6 +16,7 @@ export function useGenerationEngine() {
   const excelRows = useAppStore((s) => s.excelRows);
   const excelColumns = useAppStore((s) => s.excelColumns);
   const fieldBindings = useAppStore((s) => s.fieldBindings);
+  const schemaFields = useAppStore((s) => s.schemaFields);
   const validationRules = useAppStore((s) => s.validationRules || []);
   const conditionalRules = useAppStore((s) => s.conditionalRules || []);
   
@@ -76,28 +76,6 @@ export function useGenerationEngine() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       addNotification({ message: 'ZIP download started successfully!', level: 'success' });
-
-      // Also save generation metadata to current project if available
-      const currentProjectId = useAppStore.getState().currentProjectId;
-      if (currentProjectId) {
-        try {
-          const project = await StorageService.getProject(currentProjectId);
-          const entry = {
-            id: `gen-${Date.now()}`,
-            name: `Generated_PDFs_${Date.now()}.zip`,
-            createdAt: Date.now(),
-            zipBase64: arrayBufferToBase64(zipArrayBuffer),
-            count: Object.keys(buffersRef.current).length,
-          };
-          if (project) {
-            project.generationOutputs = project.generationOutputs || [];
-            project.generationOutputs.push(entry);
-            await StorageService.saveProject(project as PDFProject);
-          }
-        } catch (e) {
-          console.warn('Failed to save generation metadata to project', e);
-        }
-      }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown ZIP creation error';
       addNotification({ message: `Failed to create ZIP: ${message}`, level: 'error' });
@@ -137,7 +115,15 @@ export function useGenerationEngine() {
       fieldBindings.forEach((binding) => {
         const column = excelColumns.find((c) => c.index === binding.excelColumnIndex);
         if (column) {
-          input[binding.schemaFieldId] = String(row[column.header] || '');
+          let rawValue = String(row[column.header] || '');
+
+          // Normalize checkbox fields: pdfme checkbox plugin expects "true" or "false"
+          const schemaField = schemaFields.find((f) => f.name === binding.schemaFieldId);
+          if (schemaField && isCheckboxField(schemaField)) {
+            rawValue = normalizeCheckboxValue(rawValue);
+          }
+
+          input[binding.schemaFieldId] = rawValue;
         }
       });
 

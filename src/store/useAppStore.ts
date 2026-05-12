@@ -25,6 +25,10 @@ import type {
 interface AppState {
   // -- UI --
   activeTab: ActiveTab;
+
+  /** The Supabase workspace ID currently open, or null for local-only mode */
+  activeWorkspaceId: string | null;
+  setActiveWorkspaceId: (id: string | null) => void;
   setActiveTab: (tab: ActiveTab) => void;
 
   currentProjectId: string | null;
@@ -103,6 +107,9 @@ export const useAppStore = create<AppState>((set) => ({
   // -- UI --
   activeTab: 'projects',
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  activeWorkspaceId: null,
+  setActiveWorkspaceId: (id) => set({ activeWorkspaceId: id }),
 
   currentProjectId: null,
   setCurrentProjectId: (id) => set({ currentProjectId: id }),

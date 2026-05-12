@@ -10,12 +10,42 @@ import ExcelJS from 'exceljs';
 import type { IExcelColumn, ISchemaField } from '../types/pdfme.types';
 
 // ---------------------------------------------------------------------------
+// Checkbox field detection helpers
+// ---------------------------------------------------------------------------
+
+/** pdfme type names that map to a checkbox widget */
+const CHECKBOX_TYPES = new Set(['checkbox']);
+
+export function isCheckboxField(field: ISchemaField): boolean {
+  return CHECKBOX_TYPES.has((field.type ?? '').toLowerCase());
+}
+
+/**
+ * Normalise any truthy/falsy user input to the lowercase string
+ * "true" or "false" expected by @pdfme/schemas checkbox plugin.
+ */
+export function normalizeCheckboxValue(raw: string): string {
+  const v = raw.trim().toLowerCase();
+  if (['true', 'yes', '1', 'checked', 'on', 'x'].includes(v)) return 'true';
+  if (['false', 'no', '0', 'unchecked', 'off', ''].includes(v)) return 'false';
+  // Anything else — treat as unchecked
+  return 'false';
+}
+
+// ---------------------------------------------------------------------------
 // Generate blank Excel template
 // ---------------------------------------------------------------------------
 
 /**
  * Create a downloadable .xlsx file with one column per pdfme schema field.
- * Row 1 = bold headers (field names), ready for the user to fill in data.
+ *
+ * - Row 1  = bold headers (field names). Checkbox columns get a teal header
+ *            with a " ✓" suffix to signal they are boolean.
+ * - Row 2  = a hint row showing the expected value format (grayed out italic).
+ * - Row 3+ = empty data rows for the user to fill in.
+ *
+ * Checkbox columns also receive Excel Data Validation so users can pick
+ * TRUE / FALSE from a dropdown instead of typing free text.
  */
 export async function generateExcelTemplate(
   fields: ISchemaField[],
@@ -27,31 +57,81 @@ export async function generateExcelTemplate(
 
   const sheet = workbook.addWorksheet('Data');
 
-  // Headers
-  const headerRow = sheet.addRow(fields.map((f) => f.name));
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, size: 12, color: { argb: 'FF1E293B' } };
+  // ── Row 1: headers ──────────────────────────────────────────────────────
+  const headerValues = fields.map((f) =>
+    isCheckboxField(f) ? `${f.name} (TRUE/FALSE)` : f.name
+  );
+  const headerRow = sheet.addRow(headerValues);
+  headerRow.eachCell((cell, colIdx) => {
+    const field = fields[colIdx - 1];
+    const isCheckbox = field && isCheckboxField(field);
+
+    cell.font = {
+      bold: true,
+      size: 11,
+      color: { argb: isCheckbox ? 'FF065F46' : 'FF1E293B' },
+    };
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFF1F5F9' },
+      fgColor: { argb: isCheckbox ? 'FFD1FAE5' : 'FFF1F5F9' }, // teal for checkbox, slate for text
     };
     cell.border = {
-      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { argb: isCheckbox ? 'FF6EE7B7' : 'FFCBD5E1' } },
+    };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  });
+
+  // ── Row 2: hint row (italic, grayed out) ────────────────────────────────
+  const hintValues = fields.map((f) =>
+    isCheckboxField(f)
+      ? 'TRUE or FALSE'
+      : '(enter your data here)'
+  );
+  const hintRow = sheet.addRow(hintValues);
+  hintRow.eachCell((cell, colIdx) => {
+    const field = fields[colIdx - 1];
+    const isCheckbox = field && isCheckboxField(field);
+    cell.font = {
+      italic: true,
+      size: 10,
+      color: { argb: isCheckbox ? 'FF059669' : 'FF94A3B8' },
     };
     cell.alignment = { vertical: 'middle', horizontal: 'center' };
   });
+  hintRow.height = 16;
 
-  // Auto-width columns
+  // ── Auto-width columns ───────────────────────────────────────────────────
   fields.forEach((field, i) => {
     const col = sheet.getColumn(i + 1);
-    col.width = Math.max(field.name.length + 4, 14);
+    const headerLen = isCheckboxField(field)
+      ? field.name.length + 14 // account for " (TRUE/FALSE)" suffix
+      : field.name.length + 4;
+    col.width = Math.max(headerLen, 16);
   });
 
-  // Add 5 empty rows for user convenience
-  for (let r = 0; r < 5; r++) {
-    sheet.addRow(fields.map(() => ''));
+  // ── Data rows (rows 3-12) with Data Validation on checkbox columns ───────
+  const DATA_ROWS = 10;
+  for (let r = 0; r < DATA_ROWS; r++) {
+    const row = sheet.addRow(fields.map(() => ''));
+
+    // Apply dropdown validation to each checkbox cell in this row
+    fields.forEach((field, colIdx) => {
+      if (!isCheckboxField(field)) return;
+      const cell = row.getCell(colIdx + 1);
+      cell.dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: ['"TRUE,FALSE"'],
+        showErrorMessage: true,
+        errorTitle: 'Invalid value',
+        error: 'Please select TRUE or FALSE from the dropdown.',
+      };
+    });
   }
+
+  // Freeze header rows so they stay visible while scrolling
+  sheet.views = [{ state: 'frozen', ySplit: 2, xSplit: 0, activeCell: 'A3' }];
 
   // Trigger download
   const buffer = await workbook.xlsx.writeBuffer();
@@ -74,10 +154,13 @@ export async function generateExcelTemplate(
 
 /**
  * Read an uploaded Excel file and extract:
- *  - Column headers (first row)
+ *  - Column headers (first row) — strips our " (TRUE/FALSE)" suffix if present
  *  - Inferred data types
- *  - Sample values (first 5 rows)
+ *  - Sample values (first 5 data rows)
  *  - All row data as key-value records
+ *
+ * Skips the hint row (row 2) that our generated templates include,
+ * so only actual data rows are returned.
  */
 export async function parseExcelFile(file: File): Promise<{
   columns: IExcelColumn[];
@@ -91,15 +174,38 @@ export async function parseExcelFile(file: File): Promise<{
   const sheet = workbook.worksheets[0];
   if (!sheet) throw new Error('No worksheets found in the Excel file.');
 
-  const headers: string[] = [];
+  // ── Row 1: headers ───────────────────────────────────────────────
+  const rawHeaders: string[] = [];
   const firstRow = sheet.getRow(1);
   firstRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    headers[colNumber - 1] = cell.text?.toString().trim() || `Column ${colNumber}`;
+    rawHeaders[colNumber - 1] = cell.text?.toString().trim() || `Column ${colNumber}`;
   });
 
-  // Collect all data rows
+  // Strip the " (TRUE/FALSE)" suffix we add to checkbox columns so the header
+  // matches the original pdfme field name used in fieldBindings.
+  const headers = rawHeaders.map((h) => h.replace(/\s*\(TRUE\/FALSE\)\s*$/i, '').trim());
+
+  // ── Detect hint row ─────────────────────────────────────────────────
+  // Our generated templates add a hint row in row 2.  Detect it by checking
+  // whether all non-empty cells in row 2 contain well-known hint strings.
+  const HINT_STRINGS = new Set([
+    'true or false',
+    '(enter your data here)',
+  ]);
+  const row2 = sheet.getRow(2);
+  let isHintRow = false;
+  const row2Cells: string[] = [];
+  row2.eachCell({ includeEmpty: false }, (cell) => {
+    row2Cells.push(cell.text?.toString().trim().toLowerCase() ?? '');
+  });
+  if (row2Cells.length > 0 && row2Cells.every((v) => HINT_STRINGS.has(v) || v === '')) {
+    isHintRow = true;
+  }
+  const dataStartRow = isHintRow ? 3 : 2;
+
+  // ── Collect data rows ────────────────────────────────────────────────
   const allRows: Record<string, string>[] = [];
-  for (let rowNum = 2; rowNum <= sheet.rowCount; rowNum++) {
+  for (let rowNum = dataStartRow; rowNum <= sheet.rowCount; rowNum++) {
     const row = sheet.getRow(rowNum);
     const record: Record<string, string> = {};
     let hasData = false;

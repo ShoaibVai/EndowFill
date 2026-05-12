@@ -1,118 +1,90 @@
 /**
- * useAutoSave.ts — Debounced localStorage auto-save hook.
+ * useAutoSave.ts — Debounced auto-save hook (Supabase only).
  *
- * Persists pdfme template + field bindings every 1500ms after the last change.
- * On mount, checks for a saved session and exposes a restore callback.
+ * Saves to Supabase workspace_templates whenever the template changes.
+ * - If an activeWorkspaceId + currentProjectId exist → update existing template.
+ * - If an activeWorkspaceId exists but no currentProjectId → create a new template.
+ * - If no workspace is active → no-op (user must open a workspace first).
+ *
+ * The old localStorage / IndexedDB fallback has been removed.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { TemplateService } from '../services/template.service';
 
-const STORAGE_KEY = 'pdfmaster_autosave';
-const DEBOUNCE_MS = 1500;
-
-interface SavedSession {
-  timestamp: number;
-  pdfFileName: string;
-  templateSchemas: unknown;
-  fieldBindings: unknown;
-  schemaFields: unknown;
-}
+const DEBOUNCE_MS = 2000;
 
 export function useAutoSave() {
-  const pdfmeTemplate = useAppStore((s) => s.pdfmeTemplate);
-  const fieldBindings = useAppStore((s) => s.fieldBindings);
-  const schemaFields = useAppStore((s) => s.schemaFields);
-  const pdfFileName = useAppStore((s) => s.pdfFileName);
-  const hasUnsavedChanges = useAppStore((s) => s.hasUnsavedChanges);
-  const setLastSavedAt = useAppStore((s) => s.setLastSavedAt);
+  const pdfmeTemplate      = useAppStore((s) => s.pdfmeTemplate);
+  const fieldBindings      = useAppStore((s) => s.fieldBindings);
+  const schemaFields       = useAppStore((s) => s.schemaFields);
+  const pdfFileName        = useAppStore((s) => s.pdfFileName);
+  const basePdfBuffer      = useAppStore((s) => s.basePdfBuffer);
+  const validationRules    = useAppStore((s) => s.validationRules);
+  const conditionalRules   = useAppStore((s) => s.conditionalRules);
+  const hasUnsavedChanges  = useAppStore((s) => s.hasUnsavedChanges);
+  const setLastSavedAt     = useAppStore((s) => s.setLastSavedAt);
   const setHasUnsavedChanges = useAppStore((s) => s.setHasUnsavedChanges);
+  const currentProjectId   = useAppStore((s) => s.currentProjectId);
+  const activeWorkspaceId  = useAppStore((s) => s.activeWorkspaceId);
+  const setCurrentProjectId = useAppStore((s) => s.setCurrentProjectId);
 
-  const [savedSessionInfo, setSavedSessionInfo] = useState<SavedSession | null>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as SavedSession) : null;
-    } catch {
-      if (typeof localStorage?.removeItem === 'function') {
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-        } catch {
-          // ignore storage errors in test environments
-        }
-      }
-      return null;
-    }
-  });
-  const [hasSavedSession, setHasSavedSession] = useState(() => savedSessionInfo !== null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced save
   useEffect(() => {
-    if (!hasUnsavedChanges || !pdfmeTemplate) return;
+    // Only save when there's something to save AND a workspace to save into
+    if (!hasUnsavedChanges || !pdfmeTemplate || !activeWorkspaceId) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    timerRef.current = setTimeout(() => {
+    timerRef.current = setTimeout(async () => {
       try {
-        const payload: SavedSession = {
-          timestamp: Date.now(),
+        const patch = {
+          name: pdfFileName || 'Untitled Template',
           pdfFileName,
+          basePdf: basePdfBuffer ?? new ArrayBuffer(0),
           templateSchemas: pdfmeTemplate.schemas,
-          fieldBindings,
           schemaFields,
+          fieldBindings,
+          validationRules,
+          conditionalRules,
+          lastModified: Date.now(),
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+        if (currentProjectId) {
+          // Update existing cloud template
+          await TemplateService.updateTemplate(currentProjectId, patch);
+        } else {
+          // Create a new cloud template and remember its ID
+          const created = await TemplateService.createTemplate(activeWorkspaceId, {
+            ...patch,
+            snapshots: [],
+          });
+          setCurrentProjectId(created.id);
+        }
+
         setLastSavedAt(Date.now());
         setHasUnsavedChanges(false);
       } catch {
-        // localStorage quota exceeded — fail silently
-        console.warn('[AutoSave] Failed to save — storage may be full.');
+        console.warn('[AutoSave] Supabase save failed.');
       }
     }, DEBOUNCE_MS);
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [
-    hasUnsavedChanges,
-    pdfmeTemplate,
-    pdfFileName,
-    fieldBindings,
-    schemaFields,
-    setLastSavedAt,
-    setHasUnsavedChanges,
+    hasUnsavedChanges, pdfmeTemplate, pdfFileName, fieldBindings,
+    schemaFields, basePdfBuffer, validationRules, conditionalRules,
+    activeWorkspaceId, currentProjectId,
+    setLastSavedAt, setHasUnsavedChanges, setCurrentProjectId,
   ]);
 
-  /** Restore the saved session into the store. */
-  const restoreSession = useCallback(() => {
-    if (!savedSessionInfo) return;
-
-    const store = useAppStore.getState();
-    store.setPdfFileName(savedSessionInfo.pdfFileName);
-    if (savedSessionInfo.schemaFields) {
-      store.setSchemaFields(
-        savedSessionInfo.schemaFields as Parameters<typeof store.setSchemaFields>[0]
-      );
-    }
-    if (savedSessionInfo.fieldBindings) {
-      store.setFieldBindings(
-        savedSessionInfo.fieldBindings as Parameters<typeof store.setFieldBindings>[0]
-      );
-    }
-    setHasSavedSession(false);
-  }, [savedSessionInfo]);
-
-  /** Dismiss the restore prompt and clear stored session. */
-  const dismissSession = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setHasSavedSession(false);
-    setSavedSessionInfo(null);
-  }, []);
-
+  // No local session restore anymore — return stable no-op values so
+  // any existing consumers of this hook don't need to change.
   return {
-    hasSavedSession,
-    savedSessionInfo,
-    restoreSession,
-    dismissSession,
+    hasSavedSession: false,
+    savedSessionInfo: null,
+    restoreSession: () => {},
+    dismissSession: () => {},
   };
 }

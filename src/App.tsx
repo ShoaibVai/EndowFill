@@ -1,119 +1,119 @@
 /**
  * App.tsx — Root application component.
  *
- * Handles tab navigation between Editor and Bulk Generate pages,
- * auto-save restoration, and toast notifications.
+ * Routes:
+ *  /              → WelcomePage        (public)
+ *  /auth          → AuthPage           (public)
+ *  /home          → HomePage           (protected — workspace picker)
+ *  /workspace/:id → WorkspacePage      (protected — templates in workspace)
+ *  /app           → WorkspaceShell     (protected — PDF editor)
+ *  /invite/:token → InvitePage         (public — invite acceptance)
+ *  *              → redirect to /
  */
 
-import { lazy, Suspense, useEffect } from 'react';
-import { Navbar } from './components/layout/Navbar';
-import { TabNav } from './components/layout/TabNav';
-import { RestoreSessionModal } from './components/modals/RestoreSessionModal';
-import ErrorBoundary from './components/errors/ErrorBoundary';
-import { useAppStore } from './store/useAppStore';
-import { useAutoSave } from './hooks/useAutoSave';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import {
+  BrowserRouter, Routes, Route, Navigate,
+} from 'react-router-dom';
+import type { Session } from '@supabase/supabase-js';
 
-const EditorPage = lazy(() => import('./pages/EditorPage').then((m) => ({ default: m.EditorPage })));
-const BulkGeneratePage = lazy(() => import('./pages/BulkGeneratePage').then((m) => ({ default: m.BulkGeneratePage })));
-const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
+import { supabase } from './utils/supabase';
+import { cache, SESSION_TTL } from './utils/cache';
 
-export default function App() {
-  const activeTab = useAppStore((s) => s.activeTab);
-  const theme = useAppStore((s) => s.theme);
-  const setTheme = useAppStore((s) => s.setTheme);
-  const notifications = useAppStore((s) => s.notifications);
-  const removeNotification = useAppStore((s) => s.removeNotification);
+import { WelcomePage }   from './pages/WelcomePage';
+import { AuthPage }      from './pages/AuthPage';
+import { HomePage }      from './pages/HomePage';
+import { WorkspacePage } from './pages/WorkspacePage';
+import { InvitePage }    from './pages/InvitePage';
 
-  const { hasSavedSession, savedSessionInfo, restoreSession, dismissSession } = useAutoSave();
+const WorkspaceShell = lazy(() => import('./WorkspaceShell.tsx'));
 
-  // Auto-dismiss notifications after their duration
+const SESSION_CACHE_KEY = 'auth:session';
+
+const LoadingSplash = ({ text = 'Loading…' }: { text?: string }) => (
+  <div className="auth-splash" role="status">
+    <div className="auth-splash__spinner" aria-hidden="true" />
+    <p className="auth-splash__text">{text}</p>
+  </div>
+);
+
+function AuthRouter() {
+  const [session, setSession]       = useState<Session | null>(null);
+  const [sessionLoading, setSLoading] = useState(true);
+
+  // ── Session bootstrap ─────────────────────────────────────────────────
   useEffect(() => {
-    if (notifications.length === 0) return;
+    const cached = cache.get<Session>(SESSION_CACHE_KEY);
+    if (cached) { setSession(cached); setSLoading(false); }
 
-    const timers = notifications.map((n) =>
-      setTimeout(
-        () => removeNotification(n.id),
-        n.duration ?? 4000
-      )
-    );
+    supabase.auth.getSession().then(({ data }) => {
+      const s = data.session ?? null;
+      if (s) cache.set(SESSION_CACHE_KEY, s, SESSION_TTL);
+      else cache.invalidate(SESSION_CACHE_KEY);
+      setSession(s);
+      setSLoading(false);
+    });
 
-    return () => timers.forEach(clearTimeout);
-  }, [notifications, removeNotification]);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (s) cache.set(SESSION_CACHE_KEY, s, SESSION_TTL);
+      else cache.flush();
+      setSession(s);
+    });
 
-  // Hydrate theme preference once on app boot
-  useEffect(() => {
-    const saved = window.localStorage.getItem('app-theme');
-    if (saved === 'light' || saved === 'dark' || saved === 'system') {
-      setTheme(saved);
-    }
-  }, [setTheme]);
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
-  // Apply and persist theme
-  useEffect(() => {
-    const root = document.documentElement;
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const effective = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
-    root.setAttribute('data-theme', effective);
-    window.localStorage.setItem('app-theme', theme);
-  }, [theme]);
+
+
+  if (sessionLoading) return <LoadingSplash text="Loading your workspace…" />;
+
+  const authed = session !== null;
 
   return (
-    <ErrorBoundary>
-      <div className="flex flex-col min-h-screen text-slate-900 dark:text-slate-50 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-        <header className="flex flex-col z-40 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-          <Navbar />
-          <TabNav />
-        </header>
+    <Routes>
+      {/* ── Public ── */}
+      <Route path="/"             element={authed ? <Navigate to="/home" replace /> : <WelcomePage />} />
+      <Route path="/auth"         element={authed ? <Navigate to="/home" replace /> : <AuthPage />} />
+      <Route path="/invite/:token" element={<InvitePage />} />
 
-        {/* Main content */}
-        <main className="flex-1 flex flex-col min-h-0 relative">
-          <Suspense fallback={
-            <div className="flex items-center justify-center p-12 text-slate-500 animate-pulse">
-              Loading workspace...
-            </div>
-          }>
-            {activeTab === 'projects' ? (
-              <ErrorBoundary>
-                <ProjectsPage />
-              </ErrorBoundary>
-            ) : activeTab === 'editor' ? (
-              <ErrorBoundary>
-                <EditorPage />
-              </ErrorBoundary>
-            ) : (
-              <ErrorBoundary>
-                <BulkGeneratePage />
-              </ErrorBoundary>
-            )}
-          </Suspense>
-        </main>
+      {/* ── Protected: home (workspace picker) ── */}
+      <Route
+        path="/home"
+        element={authed
+          ? <HomePage user={session.user} />
+          : <Navigate to="/" replace />}
+      />
 
-        {/* Restore session modal */}
-        {hasSavedSession && savedSessionInfo && (
-          <RestoreSessionModal
-            pdfFileName={savedSessionInfo.pdfFileName}
-            timestamp={savedSessionInfo.timestamp}
-            onRestore={restoreSession}
-            onDismiss={dismissSession}
-          />
-        )}
+      {/* ── Protected: individual workspace ── */}
+      <Route
+        path="/workspace/:id"
+        element={authed
+          ? <WorkspacePage user={session.user} />
+          : <Navigate to="/" replace />}
+      />
 
-        {/* Toast notifications */}
-        {notifications.length > 0 && (
-          <div className="toast-container" role="status" aria-live="polite" aria-atomic="true">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`toast toast-${n.level}`}
-                onClick={() => removeNotification(n.id)}
-                aria-label={`${n.level} notification`}
-              >
-                {n.message}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </ErrorBoundary>
+      {/* ── Protected: PDF editor ── */}
+      <Route
+        path="/app"
+        element={authed
+          ? (
+            <Suspense fallback={<LoadingSplash text="Opening workspace…" />}>
+              <WorkspaceShell />
+            </Suspense>
+          )
+          : <Navigate to="/" replace />}
+      />
+
+      {/* ── Catch-all ── */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthRouter />
+    </BrowserRouter>
   );
 }

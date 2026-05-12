@@ -14,6 +14,21 @@ export default defineConfig(({
       '@': '/src',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('pdfme')) {
+            return 'pdfme';
+          }
+          if (id.includes('@supabase/supabase-js')) {
+            return 'supabase';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
