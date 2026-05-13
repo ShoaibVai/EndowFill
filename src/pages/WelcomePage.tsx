@@ -66,7 +66,7 @@ export function WelcomePage() {
 
       {/* ── Hero ── */}
       <section className="hero">
-        <div className="hero__badge">✨ Now with AI-powered field detection</div>
+
 
         <h1 className="hero__title">
           Build, Fill &amp; Generate<br />
