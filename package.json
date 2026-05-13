@@ -17,6 +17,7 @@
     "@pdfme/schemas": "^6.1.1",
     "@pdfme/ui": "^6.1.1",
     "@supabase/supabase-js": "^2.105.4",
+    "@vercel/analytics": "^2.0.1",
     "driver.js": "^1.4.0",
     "exceljs": "^4.4.0",
     "fflate": "^0.8.2",

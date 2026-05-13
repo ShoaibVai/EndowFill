@@ -16,6 +16,7 @@ import {
   BrowserRouter, Routes, Route, Navigate,
 } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
+import { Analytics } from '@vercel/analytics/react';
 
 import { supabase } from './utils/supabase';
 import { cache, SESSION_TTL } from './utils/cache';
@@ -140,6 +141,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthRouter />
+      <Analytics />
     </BrowserRouter>
   );
 }
