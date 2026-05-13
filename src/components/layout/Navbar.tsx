@@ -79,10 +79,10 @@ export function Navbar() {
         </div>
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
-            PDF Template Master
+            EndowFill
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Design · Map · Generate
+            Fill · Generate · Deliver
           </p>
         </div>
       </div>

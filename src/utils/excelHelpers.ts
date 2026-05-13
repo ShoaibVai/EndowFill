@@ -52,7 +52,7 @@ export async function generateExcelTemplate(
   filename = 'template_data.xlsx'
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'PDF Template Master';
+  workbook.creator = 'EndowFill';
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet('Data');

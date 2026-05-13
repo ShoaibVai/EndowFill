@@ -44,7 +44,7 @@ export function WelcomePage() {
       <nav className="welcome-nav">
         <div className="welcome-nav__brand">
           <FileText size={22} className="welcome-nav__logo-icon" />
-          <span>PDF Forge</span>
+          <span>EndowFill</span>
         </div>
         <div className="welcome-nav__actions">
           <button
@@ -69,7 +69,7 @@ export function WelcomePage() {
 
 
         <h1 className="hero__title">
-          Build, Fill &amp; Generate<br />
+          Fill, Generate &amp; Deliver<br />
           <span className="hero__title--accent">PDFs at Scale</span>
         </h1>
 
@@ -131,7 +131,7 @@ export function WelcomePage() {
       </section>
 
       <footer className="welcome-footer">
-        <p>© {new Date().getFullYear()} PDF Forge. Built with ♥ for document professionals.</p>
+        <p>© {new Date().getFullYear()} EndowFill. Built with ♥ for document professionals.</p>
       </footer>
     </div>
   );

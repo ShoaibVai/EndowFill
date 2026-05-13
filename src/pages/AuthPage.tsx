@@ -122,7 +122,7 @@ export function AuthPage() {
         <p className="auth-card__subtitle">
           {tab === 'login'
             ? 'Sign in to access your PDF workspace.'
-            : 'Join thousands of document professionals.'}
+            : 'Start filling PDFs with ease.'}
         </p>
 
         {/* Tabs */}

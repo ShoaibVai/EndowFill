@@ -147,7 +147,7 @@ export function HomePage({ user }: HomePageProps) {
       <header className="home-topbar">
         <div className="home-topbar__brand">
           <FileText size={20} />
-          <span>PDF Forge</span>
+          <span>EndowFill</span>
         </div>
         <div className="home-topbar__user">
           {profileLoading ? (
