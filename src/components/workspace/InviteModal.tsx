@@ -53,7 +53,7 @@ export function InviteModal({ workspaceId, workspaceName, onClose }: InviteModal
       <div className="modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="invite-modal-title">
         {/* Header */}
         <div className="modal-header">
-          <div className="modal-header__icon" style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--color-primary-500)' }}>
+          <div className="modal-header__icon" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--color-primary-500)' }}>
             <UserPlus size={20} />
           </div>
           <div>

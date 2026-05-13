@@ -51,7 +51,7 @@ export function EditorSidebar() {
         style={{ borderBottom: '1px solid var(--color-surface-100)' }}
       >
         <div className="flex items-center gap-2">
-          <ListFilter className="w-4 h-4" style={{ color: 'var(--color-brand-500)' }} />
+          <ListFilter className="w-4 h-4" style={{ color: 'var(--color-primary-500)' }} />
           <h2 className="text-sm font-semibold" style={{ color: 'var(--color-surface-800)' }}>
             Template Fields
           </h2>
@@ -115,7 +115,7 @@ export function EditorSidebar() {
                     ) : (
                       <ChevronDown className="w-4 h-4 text-surface-400" />
                     )}
-                    <Folder className="w-3.5 h-3.5 text-brand-400" />
+                    <Folder className="w-3.5 h-3.5 text-primary-400" />
                     <span className="text-xs font-semibold text-surface-700 select-none">
                       {groupName} <span className="text-surface-400 font-normal">({fields.length})</span>
                     </span>

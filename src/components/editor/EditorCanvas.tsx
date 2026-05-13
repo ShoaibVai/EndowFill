@@ -193,13 +193,13 @@ export function EditorCanvas() {
         <div
           className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
           style={{
-            background: 'linear-gradient(135deg, var(--color-brand-50), var(--color-brand-100))',
+            background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
           }}
         >
           {isDragOver ? (
-            <FileText className="w-9 h-9" style={{ color: 'var(--color-brand-500)' }} />
+            <FileText className="w-9 h-9" style={{ color: 'var(--color-primary-500)' }} />
           ) : (
-            <Upload className="w-9 h-9" style={{ color: 'var(--color-brand-400)' }} />
+            <Upload className="w-9 h-9" style={{ color: 'var(--color-primary-400)' }} />
           )}
         </div>
         <h3

@@ -154,7 +154,7 @@ export function FieldMapper() {
 
               {/* Connector Center */}
               <div className="flex justify-center text-slate-300">
-                <ArrowRight className="w-5 h-5" style={{ color: isMapped ? 'var(--color-brand-400)' : 'var(--color-surface-300)' }} />
+                <ArrowRight className="w-5 h-5" style={{ color: isMapped ? 'var(--color-primary-400)' : 'var(--color-surface-300)' }} />
               </div>
 
               {/* Excel Column Right (Select) */}
@@ -172,7 +172,7 @@ export function FieldMapper() {
                       });
                     }
                   }}
-                  className="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                   style={{
                     borderColor: isMapped ? 'var(--color-surface-300)' : 'var(--color-warning)',
                     color: 'var(--color-surface-700)'

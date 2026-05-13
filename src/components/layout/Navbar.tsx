@@ -123,7 +123,7 @@ export function Navbar() {
           onClick={startTour} 
           aria-label="Start guided tour"
           title="Start Guided Tour"
-          className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+          className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
         >
           <HelpCircle className="w-5 h-5" />
         </button>

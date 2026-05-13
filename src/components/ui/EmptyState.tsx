@@ -17,8 +17,8 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
       <div
         className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
         style={{
-          background: 'linear-gradient(135deg, var(--color-brand-50), var(--color-brand-100))',
-          color: 'var(--color-brand-500)',
+          background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
+          color: 'var(--color-primary-500)',
         }}
       >
         {icon}

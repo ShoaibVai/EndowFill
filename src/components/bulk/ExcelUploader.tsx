@@ -73,13 +73,13 @@ export function ExcelUploader() {
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
           style={{
-            background: 'linear-gradient(135deg, var(--color-brand-50), var(--color-brand-100))',
+            background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
           }}
         >
           {isLoading ? (
-            <div className="spinner" style={{ borderColor: 'var(--color-brand-200)', borderTopColor: 'var(--color-brand-500)' }} />
+            <div className="spinner" style={{ borderColor: 'var(--color-primary-200)', borderTopColor: 'var(--color-primary-500)' }} />
           ) : (
-            <Upload className="w-7 h-7" style={{ color: 'var(--color-brand-500)' }} />
+            <Upload className="w-7 h-7" style={{ color: 'var(--color-primary-500)' }} />
           )}
         </div>
         

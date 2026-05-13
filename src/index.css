@@ -4,16 +4,16 @@
 
 @theme {
   /* Colors */
-  --color-primary-50: #ecfeff;
-  --color-primary-100: #cffafe;
-  --color-primary-200: #a5f3fc;
-  --color-primary-300: #67e8f9;
-  --color-primary-400: #22d3ee;
-  --color-primary-500: #06b6d4;
-  --color-primary-600: #0891b2;
-  --color-primary-700: #0e7490;
-  --color-primary-800: #155e75;
-  --color-primary-900: #164e63;
+  --color-primary-50: #fef2f2;
+  --color-primary-100: #fee2e2;
+  --color-primary-200: #fecaca;
+  --color-primary-300: #fca5a5;
+  --color-primary-400: #f87171;
+  --color-primary-500: #ef4444;
+  --color-primary-600: #dc2626;
+  --color-primary-700: #b91c1c;
+  --color-primary-800: #991b1b;
+  --color-primary-900: #7f1d1d;
 
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
@@ -50,25 +50,23 @@
 
 @layer base {
   :root {
-    --bg-app: #f4f9fb;
+    --bg-app: #fafafa;
     --bg-surface: #ffffff;
-    --bg-header: rgba(255, 255, 255, 0.78);
-    --bg-app-gradient: radial-gradient(1200px 700px at 15% -10%, rgba(34, 211, 238, 0.18), transparent 60%),
-      radial-gradient(900px 600px at 90% 0%, rgba(6, 182, 212, 0.12), transparent 55%);
-    --text-main: var(--color-surface-900);
-    --text-muted: var(--color-surface-500);
-    --border-subtle: var(--color-surface-200);
+    --bg-header: rgba(255, 255, 255, 0.8);
+    --bg-app-gradient: none;
+    --text-main: #18181b;
+    --text-muted: #71717a;
+    --border-subtle: #e4e4e7;
   }
 
   :root[data-theme='dark'] {
-    --bg-app: #0b1116;
-    --bg-surface: #121a21;
-    --bg-header: rgba(18, 26, 33, 0.82);
-    --bg-app-gradient: radial-gradient(900px 600px at 10% -10%, rgba(14, 116, 144, 0.22), transparent 60%),
-      radial-gradient(800px 520px at 90% 0%, rgba(6, 182, 212, 0.14), transparent 55%);
-    --text-main: var(--color-surface-50);
-    --text-muted: var(--color-surface-400);
-    --border-subtle: var(--color-surface-800);
+    --bg-app: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-header: rgba(0, 0, 0, 0.82);
+    --bg-app-gradient: none;
+    --text-main: #fafafa;
+    --text-muted: #a1a1aa;
+    --border-subtle: #27272a;
   }
 
   body {
@@ -134,12 +132,12 @@
 
   .tab-nav__btn:hover {
     color: var(--text-main);
-    background: rgba(6, 182, 212, 0.08);
+    background: rgba(239, 68, 68, 0.08);
   }
 
   .tab-nav__btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.28);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.28);
   }
 
   .tab-nav__btn--active {
@@ -156,8 +154,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-400));
-    box-shadow: 0 10px 18px rgba(6, 182, 212, 0.35);
+    background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-500));
+    box-shadow: 0 10px 18px rgba(239, 68, 68, 0.35);
   }
 
   .navbar-file-pill {
@@ -201,17 +199,17 @@
   .navbar-btn--primary {
     color: #fff;
     background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-500));
-    box-shadow: 0 10px 20px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
   }
 
   .navbar-btn--primary:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 12px 26px rgba(6, 182, 212, 0.4);
+    box-shadow: 0 12px 26px rgba(239, 68, 68, 0.4);
   }
 
   .navbar-btn--primary:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -284,7 +282,7 @@
 .drop-zone:hover,
 .drop-zone.drag-over {
   border-color: var(--color-primary-400);
-  background: rgba(99, 102, 241, 0.04);
+  background: rgba(239, 68, 68, 0.04);
 }
 
 .drop-zone.drag-over {
@@ -323,6 +321,7 @@
 .toast-error { background: var(--bg-surface); color: var(--color-error-600); border-left: 4px solid var(--color-error-500); }
 .toast-warning { background: var(--bg-surface); color: #d97706; border-left: 4px solid #f59e0b; }
 .toast-info { background: var(--bg-surface); color: var(--text-main); border-left: 4px solid var(--color-primary-500); }
+.toast-error { border-left-color: #dc2626; }
 
 /* pdfme designer override */
 .pdfme-designer-container {

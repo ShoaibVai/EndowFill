@@ -105,7 +105,7 @@ export function WorkspaceSettingsModal({
       <div className="modal-card modal-card--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         {/* Header */}
         <div className="modal-header">
-          <div className="modal-header__icon" style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--color-primary-500)' }}>
+          <div className="modal-header__icon" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--color-primary-500)' }}>
             <Settings size={20} />
           </div>
           <div>

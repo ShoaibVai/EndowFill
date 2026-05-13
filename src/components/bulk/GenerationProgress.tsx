@@ -58,7 +58,7 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--color-surface-800)' }}>
-            {status === 'running' && <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-brand-500)' }} />}
+            {status === 'running' && <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary-500)' }} />}
             {status === 'done' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
             {status === 'cancelled' && <XCircle className="w-5 h-5 text-red-500" />}
             {status === 'running' ? 'Generating PDFs...' : status === 'done' ? 'Generation Complete' : 'Generation Cancelled'}
@@ -100,7 +100,7 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
           className="h-full transition-all duration-300"
           style={{ 
             width: `${progressPercent}%`, 
-            background: status === 'done' ? '#10b981' : status === 'cancelled' ? '#ef4444' : 'var(--color-brand-500)' 
+            background: status === 'done' ? '#10b981' : status === 'cancelled' ? '#ef4444' : 'var(--color-primary-500)' 
           }}
         />
       </div>
@@ -118,7 +118,7 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
           </div>
         )}
         {runningRows.length > 0 && (
-          <div className="flex items-center gap-1.5" style={{ color: 'var(--color-brand-500)' }}>
+          <div className="flex items-center gap-1.5" style={{ color: 'var(--color-primary-500)' }}>
             <Loader2 className="w-4 h-4 animate-spin" />
             {runningRows.length} Active Workers
           </div>

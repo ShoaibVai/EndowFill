@@ -29,7 +29,7 @@ export function FilenameEditor({
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
           style={{ borderColor: 'var(--color-surface-300)', color: 'var(--color-surface-700)' }}
           placeholder="e.g., document_{row_number}.pdf"
         />
@@ -38,7 +38,7 @@ export function FilenameEditor({
           <button
             onClick={() => setShowTokens(!showTokens)}
             className="btn btn-ghost btn-sm text-xs"
-            style={{ color: 'var(--color-brand-600)' }}
+            style={{ color: 'var(--color-primary-600)' }}
           >
             Insert Token...
           </button>

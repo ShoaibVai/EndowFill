@@ -92,7 +92,7 @@ export function EditorToolbar() {
       {schemaFields.length > 0 && (
         <div className="hidden md:flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5" style={{ color: 'var(--color-brand-500)' }} />
+            <Layers className="w-3.5 h-3.5" style={{ color: 'var(--color-primary-500)' }} />
             <span className="text-xs font-medium" style={{ color: 'var(--color-surface-500)' }}>
               {schemaFields.length} field{schemaFields.length !== 1 ? 's' : ''} defined
             </span>

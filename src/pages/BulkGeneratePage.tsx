@@ -62,8 +62,8 @@ export function BulkGeneratePage() {
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600))',
-                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
               }}
             >
               <Sparkles className="w-5 h-5 text-white" />
@@ -99,12 +99,12 @@ export function BulkGeneratePage() {
                </div>
 
                {isFullyMapped && !generationJob && (
-                 <div className="card p-6 flex flex-col gap-6" style={{ background: 'linear-gradient(135deg, var(--color-brand-50), white)', border: '1px solid var(--color-brand-200)' }}>
+                 <div className="card p-6 flex flex-col gap-6" style={{ background: 'linear-gradient(135deg, var(--color-primary-50), white)', border: '1px solid var(--color-primary-200)' }}>
                    <FilenameEditor value={filenamePattern} onChange={setFilenamePattern} />
                    
-                   <div className="flex items-center justify-between mt-2 pt-4" style={{ borderTop: '1px solid var(--color-brand-100)' }}>
+                   <div className="flex items-center justify-between mt-2 pt-4" style={{ borderTop: '1px solid var(--color-primary-100)' }}>
                      <div>
-                       <h3 className="text-lg font-bold" style={{ color: 'var(--color-brand-800)' }}>Ready to Generate</h3>
+                       <h3 className="text-lg font-bold" style={{ color: 'var(--color-primary-800)' }}>Ready to Generate</h3>
                        <p className="text-sm mt-1" style={{ color: 'var(--color-surface-500)' }}>
                          All fields are mapped successfully.
                        </p>

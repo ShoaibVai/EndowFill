@@ -252,7 +252,7 @@ export function ProjectsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
               <FolderKanban className="w-6 h-6" />
             </div>
             <div>
@@ -284,7 +284,7 @@ export function ProjectsPage() {
             </button>
             <button
               onClick={handleCreateNew}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white shadow-sm hover:bg-primary-700 transition-colors"
               id="new-template-btn"
             >
               <Plus className="w-4 h-4" />
@@ -296,7 +296,7 @@ export function ProjectsPage() {
         {/* Grid */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 animate-pulse">
-            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
+            <div className="w-8 h-8 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mb-4" />
             Loading templates…
           </div>
         ) : templates.length === 0 ? (
@@ -312,7 +312,7 @@ export function ProjectsPage() {
             </div>
             <button
               onClick={handleCreateNew}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 mt-2 rounded-lg text-sm font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 mt-2 rounded-lg text-sm font-medium bg-primary-600 text-white shadow-sm hover:bg-primary-700 transition-colors"
             >
               Create New Template
             </button>
@@ -322,7 +322,7 @@ export function ProjectsPage() {
             {templates.map((tpl) => (
               <div
                 key={tpl.id}
-                className="group relative flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 overflow-hidden"
+                className="group relative flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-red-300 dark:hover:border-red-700 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 overflow-hidden"
                 onClick={() => handleOpenTemplate(tpl)}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -342,8 +342,8 @@ export function ProjectsPage() {
                   ) : (
                     <FileText className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-2 transition-transform group-hover:scale-110 duration-300" />
                   )}
-                  <div className="absolute inset-0 bg-indigo-900/5 dark:bg-indigo-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
-                    <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-indigo-600 shadow-sm">
+                  <div className="absolute inset-0 bg-red-900/5 dark:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+                    <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-red-600 shadow-sm">
                       Open Template
                     </span>
                   </div>
@@ -355,7 +355,7 @@ export function ProjectsPage() {
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                     <button
                       onClick={(e) => startEditing(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
                       title="Rename"
                       aria-label="Rename template"
                     >
@@ -363,7 +363,7 @@ export function ProjectsPage() {
                     </button>
                     <button
                       onClick={(e) => handleDuplicate(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
                       title="Duplicate"
                       aria-label="Duplicate template"
                     >
@@ -371,7 +371,7 @@ export function ProjectsPage() {
                     </button>
                     <button
                       onClick={(e) => handleExport(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
                       title="Export"
                       aria-label="Export template"
                     >
@@ -396,7 +396,7 @@ export function ProjectsPage() {
                         onChange={(e) => setEditName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && saveRename(tpl, e)}
                         autoFocus
-                        className="flex-1 w-full text-sm font-semibold bg-transparent border-b-2 border-indigo-500 focus:outline-none text-slate-900 dark:text-white px-1 py-0.5"
+                        className="flex-1 w-full text-sm font-semibold bg-transparent border-b-2 border-red-500 focus:outline-none text-slate-900 dark:text-white px-1 py-0.5"
                       />
                       <button onClick={(e) => saveRename(tpl, e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded" aria-label="Save rename">
                         <Check className="w-3.5 h-3.5" />

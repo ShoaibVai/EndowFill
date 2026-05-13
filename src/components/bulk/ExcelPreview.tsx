@@ -30,7 +30,7 @@ export function ExcelPreview() {
       {/* Header */}
       <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-surface-200)', background: 'var(--color-surface-50)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-brand-100)', color: 'var(--color-brand-600)' }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}>
             <FileSpreadsheet className="w-4 h-4" />
           </div>
           <div>
