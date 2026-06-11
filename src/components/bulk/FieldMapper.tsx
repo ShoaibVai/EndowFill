@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Download, Upload } from 'lucide-react';
+import { ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Download, Upload, Image } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { findBestColumnMatch } from '../../utils/stringUtils';
+import { isImageField } from '../../utils/excelHelpers';
 
 export function FieldMapper() {
   const schemaFields = useAppStore((s) => s.schemaFields);
@@ -150,6 +151,11 @@ export function FieldMapper() {
               <div className="flex flex-col">
                 <span className="text-sm font-medium" style={{ color: 'var(--color-surface-800)' }}>{field.name}</span>
                 <span className="text-xs" style={{ color: 'var(--color-surface-400)' }}>{field.type}{field.required ? ' • Required' : ''}</span>
+                {isImageField(field) && (
+                  <span className="text-xs flex items-center gap-1 mt-0.5" style={{ color: 'var(--color-primary-500)' }}>
+                    <Image className="w-3 h-3" /> Accepts Google Drive URLs
+                  </span>
+                )}
               </div>
 
               {/* Connector Center */}

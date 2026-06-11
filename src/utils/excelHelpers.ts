@@ -10,14 +10,21 @@ import ExcelJS from 'exceljs';
 import type { IExcelColumn, ISchemaField } from '../types/pdfme.types';
 
 // ---------------------------------------------------------------------------
-// Checkbox field detection helpers
+// Field type detection helpers
 // ---------------------------------------------------------------------------
 
 /** pdfme type names that map to a checkbox widget */
 const CHECKBOX_TYPES = new Set(['checkbox']);
 
+/** pdfme type names that represent image fields */
+const IMAGE_TYPES = new Set(['image', 'signature']);
+
 export function isCheckboxField(field: ISchemaField): boolean {
   return CHECKBOX_TYPES.has((field.type ?? '').toLowerCase());
+}
+
+export function isImageField(field: ISchemaField): boolean {
+  return IMAGE_TYPES.has((field.type ?? '').toLowerCase());
 }
 
 /**
@@ -83,11 +90,11 @@ export async function generateExcelTemplate(
   });
 
   // ── Row 2: hint row (italic, grayed out) ────────────────────────────────
-  const hintValues = fields.map((f) =>
-    isCheckboxField(f)
-      ? 'TRUE or FALSE'
-      : '(enter your data here)'
-  );
+  const hintValues = fields.map((f) => {
+    if (isCheckboxField(f)) return 'TRUE or FALSE';
+    if (isImageField(f)) return 'Google Drive image URL';
+    return '(enter your data here)';
+  });
   const hintRow = sheet.addRow(hintValues);
   hintRow.eachCell((cell, colIdx) => {
     const field = fields[colIdx - 1];
@@ -191,6 +198,7 @@ export async function parseExcelFile(file: File): Promise<{
   const HINT_STRINGS = new Set([
     'true or false',
     '(enter your data here)',
+    'google drive image url',
   ]);
   const row2 = sheet.getRow(2);
   let isHintRow = false;

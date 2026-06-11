@@ -2,6 +2,7 @@ import { generate } from '@pdfme/generator';
 import { text, image, signature, barcodes, checkbox } from '@pdfme/schemas';
 import type { IConditionalRule, IPdfmeTemplate, IValidationRule } from '../types/pdfme.types';
 import type { GenerateProps } from '@pdfme/common';
+import { isImageUrl, isImageDataUri, fetchImageAsDataUrl } from '../utils/imageUtils';
 // Cache bust: 12345
 
 interface WorkerTemplate extends IPdfmeTemplate {
@@ -100,6 +101,48 @@ self.onmessage = async (event: MessageEvent<GenerateJobData>) => {
             return;
           }
         }
+      }
+    }
+
+    // Resolve image URLs: if an image field's value is a URL, fetch and convert to base64 data URI
+    const IMAGE_TYPES = new Set(['image', 'signature']);
+    const imageFieldNames = new Set<string>();
+    if (effectiveTemplate && effectiveTemplate.schemas) {
+      for (const page of effectiveTemplate.schemas) {
+        if (page && typeof page === 'object') {
+          for (const [fieldName, fieldProps] of Object.entries(page)) {
+            const props = fieldProps as Record<string, unknown>;
+            if (props.type && IMAGE_TYPES.has(String(props.type).toLowerCase())) {
+              imageFieldNames.add(fieldName);
+            }
+          }
+        }
+      }
+    }
+
+    if (imageFieldNames.size > 0) {
+      const resolvedInput = { ...input };
+      const fetchPromises: Promise<void>[] = [];
+
+      for (const [fieldName, value] of Object.entries(resolvedInput)) {
+        if (imageFieldNames.has(fieldName) && isImageUrl(value) && !isImageDataUri(value)) {
+          fetchPromises.push(
+            fetchImageAsDataUrl(value)
+              .then((dataUrl) => {
+                resolvedInput[fieldName] = dataUrl;
+              })
+              .catch((err) => {
+                const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+                throw new Error(`Failed to load image for field "${fieldName}": ${errorMsg}`);
+              })
+          );
+        }
+      }
+
+      if (fetchPromises.length > 0) {
+        await Promise.all(fetchPromises);
+        // Replace input with resolved version
+        Object.assign(input, resolvedInput);
       }
     }
 
