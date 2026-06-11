@@ -111,8 +111,7 @@ self.onmessage = async (event: MessageEvent<GenerateJobData>) => {
       for (const page of effectiveTemplate.schemas) {
         if (page && typeof page === 'object') {
           for (const [fieldName, fieldProps] of Object.entries(page)) {
-            const props = fieldProps as Record<string, unknown>;
-            if (props.type && IMAGE_TYPES.has(String(props.type).toLowerCase())) {
+            if (fieldProps.type && IMAGE_TYPES.has(fieldProps.type.toLowerCase())) {
               imageFieldNames.add(fieldName);
             }
           }
