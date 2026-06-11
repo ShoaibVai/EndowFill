@@ -107,7 +107,7 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
   useEffect(() => {
     loadWorkspace();
     loadTemplates();
-    if (workspace.role === 'owner') {
+    if (workspace?.role === 'owner') {
       loadPendingRequests();
     }
   }, [loadWorkspace, loadTemplates, loadPendingRequests, workspace?.role]);
