@@ -17,6 +17,7 @@ import {
 } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import { supabase } from './utils/supabase';
 import { cache, SESSION_TTL } from './utils/cache';
@@ -142,6 +143,7 @@ export default function App() {
     <BrowserRouter>
       <AuthRouter />
       <Analytics />
+      <SpeedInsights />
     </BrowserRouter>
   );
 }
