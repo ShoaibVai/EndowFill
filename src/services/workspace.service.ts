@@ -55,6 +55,30 @@ export interface WorkspaceWithMeta extends Workspace {
   members: WorkspaceMember[];   // first few for avatars
 }
 
+export type JoinRequestStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface JoinRequest {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  message?: string;
+  status: JoinRequestStatus;
+  requested_at: string;
+  processed_at?: string;
+  processed_by?: string;
+  /** Joined from profiles */
+  profile?: {
+    email?: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+  /** Joined from workspaces */
+  workspace?: {
+    name?: string;
+    description?: string;
+  };
+}
+
 // ── Workspace CRUD ─────────────────────────────────────────────────────────────
 
 export const WorkspaceService = {
@@ -316,5 +340,154 @@ export const WorkspaceService = {
       .eq('token', token);
 
     return invite.workspace_id;
+  },
+
+  // ── Join Requests ───────────────────────────────────────────────────────
+
+  /** Create a join request for the current user */
+  async createJoinRequest(workspaceId: string, message?: string): Promise<JoinRequest> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('workspace_join_requests')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: user.id,
+        message: message?.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('You already have a pending request for this workspace');
+      }
+      throw toError(error);
+    }
+    return data as JoinRequest;
+  },
+
+  /** List pending join requests for a workspace (owner/editor only) */
+  async listJoinRequests(workspaceId: string): Promise<JoinRequest[]> {
+    const { data, error } = await supabase
+      .from('workspace_join_requests')
+      .select(`
+        *,
+        profile:profiles(email, full_name, avatar_url)
+      `)
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: true });
+
+    if (error) throw toError(error);
+    return (data ?? []) as unknown as JoinRequest[];
+  },
+
+  /** List join requests made by the current user */
+  async listMyJoinRequests(): Promise<JoinRequest[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('workspace_join_requests')
+      .select(`
+        *,
+        workspace:workspaces(name, description)
+      `)
+      .eq('user_id', user.id)
+      .order('requested_at', { ascending: false });
+
+    if (error) throw toError(error);
+    return (data ?? []) as unknown as JoinRequest[];
+  },
+
+  /** Check if the current user has a pending request for a workspace */
+  async hasPendingJoinRequest(workspaceId: string): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from('workspace_join_requests')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (error) return false;
+    return !!data;
+  },
+
+  /** Accept a join request — adds user as member (owner only) */
+  async acceptJoinRequest(requestId: string, role: WorkspaceRole): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get the request
+    const { data: request, error: fetchError } = await supabase
+      .from('workspace_join_requests')
+      .select('*')
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (fetchError || !request) throw new Error('Join request not found');
+
+    // Add as member
+    const { error: memberError } = await supabase
+      .from('workspace_members')
+      .insert({
+        workspace_id: request.workspace_id,
+        user_id: request.user_id,
+        role,
+        invited_by: user.id,
+      });
+
+    if (memberError) {
+      if (memberError.code === '23505') {
+        throw new Error('User is already a member of this workspace');
+      }
+      throw memberError;
+    }
+
+    // Update request status
+    const { error: updateError } = await supabase
+      .from('workspace_join_requests')
+      .update({
+        status: 'accepted',
+        processed_at: new Date().toISOString(),
+        processed_by: user.id,
+      })
+      .eq('id', requestId);
+
+    if (updateError) throw toError(updateError);
+  },
+
+  /** Reject a join request (owner only) */
+  async rejectJoinRequest(requestId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('workspace_join_requests')
+      .update({
+        status: 'rejected',
+        processed_at: new Date().toISOString(),
+        processed_by: user.id,
+      })
+      .eq('id', requestId);
+
+    if (error) throw toError(error);
+  },
+
+  /** Cancel a join request (user can cancel their own pending request) */
+  async cancelJoinRequest(requestId: string): Promise<void> {
+    const { error } = await supabase
+      .from('workspace_join_requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) throw toError(error);
   },
 };

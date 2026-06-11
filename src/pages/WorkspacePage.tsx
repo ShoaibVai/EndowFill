@@ -21,7 +21,9 @@ import {
   Building2,
   Download,
   Upload,
+  UserCheck,
 } from 'lucide-react';
+import { JoinRequestsPanel } from '../components/workspace/JoinRequestsPanel';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { WorkspaceService } from '../services/workspace.service';
 import type { WorkspaceWithMeta } from '../services/workspace.service';
@@ -48,6 +50,8 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
   const [tplLoading, setTplLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showJoinRequests, setShowJoinRequests] = useState(false);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const setActiveWorkspaceId = useAppStore((s) => s.setActiveWorkspaceId);
@@ -90,10 +94,23 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
     }
   }, [workspaceId]);
 
+  const loadPendingRequests = useCallback(async () => {
+    if (!workspaceId) return;
+    try {
+      const requests = await WorkspaceService.listJoinRequests(workspaceId);
+      setPendingRequestCount(requests.length);
+    } catch {
+      // Silently fail - not critical
+    }
+  }, [workspaceId]);
+
   useEffect(() => {
     loadWorkspace();
     loadTemplates();
-  }, [loadWorkspace, loadTemplates]);
+    if (workspace.role === 'owner') {
+      loadPendingRequests();
+    }
+  }, [loadWorkspace, loadTemplates, loadPendingRequests, workspace?.role]);
 
   // ── Open a template in the editor ─────────────────────────────────────
   const handleOpenTemplate = async (tpl: WorkspaceTemplate) => {
@@ -249,6 +266,15 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
         </div>
         <div className="ws-page__header-right">
           <MemberAvatars members={workspace.members} maxVisible={5} size={30} />
+          {workspace.role === 'owner' && pendingRequestCount > 0 && (
+            <button
+              id="ws-join-requests-btn"
+              className="btn-ghost btn-ghost--sm join-requests-badge"
+              onClick={() => setShowJoinRequests(true)}
+            >
+              <UserCheck size={15} /> Join Requests ({pendingRequestCount})
+            </button>
+          )}
           {canEdit && (
             <button id="ws-invite-btn" className="btn-ghost btn-ghost--sm" onClick={() => setShowInvite(true)}>
               <UserPlus size={15} /> Invite
@@ -399,6 +425,17 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
           workspaceId={workspace.id}
           workspaceName={workspace.name}
           onClose={() => setShowInvite(false)}
+        />
+      )}
+      {showJoinRequests && (
+        <JoinRequestsPanel
+          workspaceId={workspace.id}
+          onClose={() => setShowJoinRequests(false)}
+          onUpdated={() => {
+            loadWorkspace();
+            loadPendingRequests();
+            cache.flush();
+          }}
         />
       )}
       {showSettings && (

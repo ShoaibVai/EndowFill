@@ -9,9 +9,10 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, Settings, Trash2, UserMinus, Crown, Edit2, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { X, Settings, Trash2, UserMinus, Crown, Edit2, Check, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
 import { WorkspaceService } from '../../services/workspace.service';
-import type { WorkspaceWithMeta, WorkspaceMember, WorkspaceRole, WorkspaceInvite } from '../../services/workspace.service';
+import type { WorkspaceWithMeta, WorkspaceMember, WorkspaceRole, WorkspaceInvite, JoinRequest } from '../../services/workspace.service';
+import { JoinRequestsPanel } from './JoinRequestsPanel';
 
 interface WorkspaceSettingsModalProps {
   workspace: WorkspaceWithMeta;
@@ -37,6 +38,9 @@ export function WorkspaceSettingsModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [loadingJoinRequests, setLoadingJoinRequests] = useState(true);
+  const [showJoinRequestsPanel, setShowJoinRequestsPanel] = useState(false);
 
   const isOwner = workspace.role === 'owner';
 
@@ -46,6 +50,15 @@ export function WorkspaceSettingsModal({
       .catch(() => {})
       .finally(() => setLoadingInvites(false));
   }, [workspace.id]);
+
+  useEffect(() => {
+    if (isOwner) {
+      WorkspaceService.listJoinRequests(workspace.id)
+        .then(setJoinRequests)
+        .catch(() => {})
+        .finally(() => setLoadingJoinRequests(false));
+    }
+  }, [workspace.id, isOwner]);
 
   const handleSaveName = async () => {
     if (!name.trim() || name === workspace.name) { setRenaming(false); return; }
@@ -238,6 +251,56 @@ export function WorkspaceSettingsModal({
             </section>
           )}
 
+          {/* Join requests */}
+          {isOwner && (
+            <section className="settings-section">
+              <h3 className="settings-section__title">
+                <UserCheck size={14} style={{ marginRight: 6 }} />
+                Join Requests
+                {joinRequests.length > 0 && (
+                  <span className="join-requests-count">{joinRequests.length}</span>
+                )}
+              </h3>
+              {loadingJoinRequests ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
+              ) : joinRequests.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No pending join requests</div>
+              ) : (
+                <>
+                  <div className="member-list">
+                    {joinRequests.slice(0, 3).map((req) => (
+                      <div key={req.id} className="member-row">
+                        <div className="member-row__avatar">
+                          {req.profile?.avatar_url
+                            ? <img src={req.profile.avatar_url} alt="" />
+                            : <span>{(req.profile?.full_name || req.profile?.email || '?').slice(0, 2).toUpperCase()}</span>
+                          }
+                        </div>
+                        <div className="member-row__info">
+                          <span className="member-row__name">{req.profile?.full_name || req.profile?.email}</span>
+                          {req.message && (
+                            <span className="member-row__email" style={{ fontStyle: 'italic' }}>
+                              "{req.message}"
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {joinRequests.length > 0 && (
+                    <button
+                      className="btn-ghost btn-ghost--sm"
+                      onClick={() => setShowJoinRequestsPanel(true)}
+                      style={{ marginTop: 8 }}
+                    >
+                      <UserCheck size={14} /> Manage All Requests
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
           {/* Danger zone */}
           {isOwner && (
             <section className="settings-section settings-section--danger">
@@ -271,6 +334,20 @@ export function WorkspaceSettingsModal({
           )}
         </div>
       </div>
+
+      {/* Join Requests Panel */}
+      {showJoinRequestsPanel && (
+        <JoinRequestsPanel
+          workspaceId={workspace.id}
+          onClose={() => setShowJoinRequestsPanel(false)}
+          onUpdated={() => {
+            WorkspaceService.listJoinRequests(workspace.id)
+              .then(setJoinRequests)
+              .catch(() => {});
+            onUpdated();
+          }}
+        />
+      )}
     </div>
   );
 }

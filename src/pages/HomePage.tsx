@@ -21,7 +21,9 @@ import {
   Crown,
   Edit2,
   Eye,
+  Search,
 } from 'lucide-react';
+import { JoinRequestModal } from '../components/workspace/JoinRequestModal';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { WorkspaceService } from '../services/workspace.service';
 import type { WorkspaceWithMeta } from '../services/workspace.service';
@@ -58,6 +60,7 @@ export function HomePage({ user }: HomePageProps) {
   const [creating, setCreating] = useState(false);
   const [newWsName, setNewWsName] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   // ── Load profile ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -183,13 +186,22 @@ export function HomePage({ user }: HomePageProps) {
               <Building2 size={18} style={{ color: 'var(--color-primary-500)' }} />
               <h2 className="ws-section__title">Your Workspaces</h2>
             </div>
-            <button
-              id="home-new-workspace-btn"
-              className="btn-primary"
-              onClick={() => setShowCreateForm(true)}
-            >
-              <Plus size={15} /> New Workspace
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                id="home-join-workspace-btn"
+                className="btn-ghost"
+                onClick={() => setShowJoinModal(true)}
+              >
+                <Search size={15} /> Join Workspace
+              </button>
+              <button
+                id="home-new-workspace-btn"
+                className="btn-primary"
+                onClick={() => setShowCreateForm(true)}
+              >
+                <Plus size={15} /> New Workspace
+              </button>
+            </div>
           </div>
 
           {/* Create form */}
@@ -269,6 +281,11 @@ export function HomePage({ user }: HomePageProps) {
         </section>
 
       </main>
+
+      {/* Join Workspace Modal */}
+      {showJoinModal && (
+        <JoinRequestModal onClose={() => setShowJoinModal(false)} />
+      )}
     </div>
   );
 }
