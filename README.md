@@ -1,73 +1,127 @@
-# React + TypeScript + Vite
+# EndowFill
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A collaborative PDF template editor and bulk generation tool built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### PDF Template Editor
+- **Drag-and-drop field designer** - Upload PDF templates and place text, image, and signature fields visually
+- **Real-time preview** - See exactly how filled PDFs will look before generation
+- **Template versioning** - Automatic snapshots and change tracking
 
-## React Compiler
+### Bulk PDF Generation
+- **Excel/CSV import** - Upload data files to generate hundreds of filled PDFs
+- **Field mapping** - Map Excel columns to template fields with intuitive UI
+- **Validation rules** - Define validation constraints for data quality assurance
+- **Conditional rules** - Dynamic field behavior based on data values
+- **Custom filenames** - Pattern-based naming using your data fields
+- **Progress tracking** - Real-time generation progress with pause/resume support
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Workspace Collaboration
+- **Multi-user workspaces** - Organize templates into shared workspaces
+- **Role-based access** - Owner (full access), Editor (edit), Viewer (read-only)
+- **Invite system** - Email invites and join requests for workspace access
+- **Template sharing** - Export/import templates in portable `.pdftemplate` format
 
-## Expanding the ESLint configuration
+### Technical Features
+- **Offline support** - IndexedDB for local storage and caching
+- **Auto-save** - Automatic template saving to Supabase
+- **Dark/Light/System theme** - Adaptive theming with CSS variables
+- **Responsive design** - Tailwind CSS styling
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech Stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **React 19** with TypeScript
+- **Vite** for fast development/build
+- **pdfme** for PDF editing and generation
+- **Supabase** for authentication and database
+- **Zustand** for state management
+- **Tailwind CSS** for styling
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+
+- Node.js 18+
+- Supabase project (free tier works)
+
+### Installation
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Configuration
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Copy `.env.example` to `.env.local`
+2. Fill in your Supabase credentials:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` - Your anon/public key
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Development
+
+```bash
+npm run dev
 ```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Testing
+
+```bash
+npm run test
+```
+
+## Database Schema
+
+The application requires the following Supabase tables:
+
+- `profiles` - User profile information
+- `workspaces` - Workspace metadata
+- `workspace_members` - User membership (workspace_id, user_id, role)
+- `templates` - PDF template data and schema
+- `join_requests` - Workspace join requests
+- `template_snapshots` - Template version history
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── editor/       # PDF editor UI (toolbar, sidebar, canvas)
+│   ├── bulk/         # Bulk generation components
+│   ├── workspace/    # Workspace UI components
+│   ├── layout/       # Navbar, tabs, navigation
+│   └── ui/           # Shared UI components
+├── pages/
+│   ├── WelcomePage.tsx    # Landing page
+│   ├── AuthPage.tsx       # Authentication
+│   ├── HomePage.tsx       # Workspace dashboard
+│   ├── WorkspacePage.tsx  # Workspace detail
+│   ├── EditorPage.tsx     # PDF editor
+│   ├── BulkGeneratePage.tsx # Bulk generation
+│   └── InvitePage.tsx     # Invite acceptance
+├── services/        # Supabase queries and business logic
+├── hooks/           # Custom React hooks
+├── store/           # Zustand state management
+└── utils/           # Helper functions
+```
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run tests once |
+| `npm run test:watch` | Run tests in watch mode |
+
+## License
+
+MIT
