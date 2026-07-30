@@ -1110,3 +1110,68 @@
 textarea.form-input--icon {
   padding-left: 36px;
 }
+
+/* ── Invite Cards (HomePage) ─────────────────────────────────────── */
+.invite-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.invite-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-surface-100);
+  border: 1px solid var(--color-surface-300);
+  border-radius: 10px;
+  padding: 14px 18px;
+  transition: border-color .15s;
+}
+
+.invite-card:hover {
+  border-color: var(--color-primary-400);
+}
+
+.invite-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(245,158,11,0.1);
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.invite-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.invite-card__name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.invite-card__detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.invite-card__expiry {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.invite-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}

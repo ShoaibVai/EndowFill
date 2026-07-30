@@ -146,6 +146,7 @@ export const WorkspaceService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Use a single RPC call to avoid RLS self-referencing issue
     const { data: ws, error: wsError } = await supabase
       .from('workspaces')
       .insert({ name, description, created_by: user.id })
@@ -156,18 +157,28 @@ export const WorkspaceService = {
       throw new Error(wsError.message || 'Failed to create workspace');
     }
 
-    // Add creator as owner
-    const { error: memberError } = await supabase
-      .from('workspace_members')
-      .insert({
-        workspace_id: ws.id,
-        user_id: user.id,
-        role: 'owner',
-        invited_by: user.id,
-      });
+    // Use service role bypass via an RPC to avoid RLS chicken-and-egg problem
+    const { error: memberError } = await supabase.rpc('add_workspace_owner', {
+      p_workspace_id: ws.id,
+      p_user_id: user.id,
+    });
 
     if (memberError) {
-      throw new Error(memberError.message || 'Failed to add creator as owner');
+      // Fallback: try direct insert (works with the 'self-join via invite' RLS path)
+      const { error: fallbackError } = await supabase
+        .from('workspace_members')
+        .insert({
+          workspace_id: ws.id,
+          user_id: user.id,
+          role: 'owner',
+          invited_by: user.id,
+        });
+
+      if (fallbackError) {
+        // Clean up the orphaned workspace
+        await supabase.from('workspaces').delete().eq('id', ws.id);
+        throw new Error(fallbackError.message || 'Failed to add creator as owner');
+      }
     }
 
     return ws as Workspace;
@@ -296,6 +307,40 @@ export const WorkspaceService = {
       .from('workspace_invites')
       .delete()
       .eq('id', inviteId);
+    if (error) throw toError(error);
+  },
+
+  /** Get all pending invites for the current user (in-app notifications) */
+  async getMyPendingInvites(): Promise<{
+    id: string;
+    workspace_id: string;
+    workspace_name: string;
+    role: WorkspaceRole;
+    invited_by: string;
+    invited_by_name?: string;
+    invited_by_email?: string;
+    created_at: string;
+    expires_at: string;
+  }[]> {
+    const { data, error } = await supabase.rpc('get_my_pending_invites');
+    if (error) throw toError(error);
+    return (data ?? []) as any;
+  },
+
+  /** Accept an invite by ID (for in-app acceptance) */
+  async acceptInviteById(inviteId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('accept_invite_by_id', {
+      p_invite_id: inviteId,
+    });
+    if (error) throw toError(error);
+    return data as string;
+  },
+
+  /** Decline an invite by ID */
+  async declineInvite(inviteId: string): Promise<void> {
+    const { error } = await supabase.rpc('decline_invite', {
+      p_invite_id: inviteId,
+    });
     if (error) throw toError(error);
   },
 

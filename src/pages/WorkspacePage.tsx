@@ -107,10 +107,13 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
   useEffect(() => {
     loadWorkspace();
     loadTemplates();
+  }, [loadWorkspace, loadTemplates]);
+
+  useEffect(() => {
     if (workspace?.role === 'owner') {
       loadPendingRequests();
     }
-  }, [loadWorkspace, loadTemplates, loadPendingRequests, workspace?.role]);
+  }, [workspace?.role, loadPendingRequests]);
 
   // ── Open a template in the editor ─────────────────────────────────────
   const handleOpenTemplate = async (tpl: WorkspaceTemplate) => {

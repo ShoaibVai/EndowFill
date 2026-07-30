@@ -22,6 +22,9 @@ import {
   Edit2,
   Eye,
   Search,
+  Mail,
+  Check,
+  X,
 } from 'lucide-react';
 import { JoinRequestModal } from '../components/workspace/JoinRequestModal';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -61,6 +64,54 @@ export function HomePage({ user }: HomePageProps) {
   const [newWsName, setNewWsName] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+
+  // ── Pending invites ────────────────────────────────────────────────
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [invitesLoading, setInvitesLoading] = useState(true);
+  const [acceptingInvite, setAcceptingInvite] = useState<string | null>(null);
+  const [decliningInvite, setDecliningInvite] = useState<string | null>(null);
+
+  const loadPendingInvites = useCallback(async () => {
+    try {
+      const data = await WorkspaceService.getMyPendingInvites();
+      setPendingInvites(data);
+    } catch {
+      // silent
+    } finally {
+      setInvitesLoading(false);
+    }
+  }, []);
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    setAcceptingInvite(inviteId);
+    try {
+      const wsId = await WorkspaceService.acceptInviteById(inviteId);
+      setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+      addNotification({ message: 'Joined workspace', level: 'success' });
+      cache.invalidate(WORKSPACES_CACHE_KEY(user.id));
+      loadWorkspaces();
+      setTimeout(() => navigate(`/workspace/${wsId}`), 500);
+    } catch (err) {
+      addNotification({ message: err instanceof Error ? err.message : 'Failed to accept invite', level: 'error' });
+    } finally {
+      setAcceptingInvite(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    setDecliningInvite(inviteId);
+    try {
+      await WorkspaceService.declineInvite(inviteId);
+      setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+      addNotification({ message: 'Invite declined', level: 'info' });
+    } catch {
+      addNotification({ message: 'Failed to decline invite', level: 'error' });
+    } finally {
+      setDecliningInvite(null);
+    }
+  };
+
+  useEffect(() => { loadPendingInvites(); }, [loadPendingInvites]);
 
   // ── Load profile ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,6 +229,64 @@ export function HomePage({ user }: HomePageProps) {
             Choose a workspace to start editing and generating PDFs collaboratively.
           </p>
         </section>
+
+        {/* Pending invites */}
+        {!invitesLoading && pendingInvites.length > 0 && (
+          <section className="ws-section">
+            <div className="ws-section__head">
+              <div className="ws-section__title-row">
+                <Mail size={18} style={{ color: '#f59e0b' }} />
+                <h2 className="ws-section__title">Pending Invites</h2>
+              </div>
+            </div>
+            <div className="invite-cards">
+              {pendingInvites.map((inv) => (
+                <div key={inv.id} className="invite-card">
+                  <div className="invite-card__icon">
+                    <Building2 size={20} />
+                  </div>
+                  <div className="invite-card__info">
+                    <span className="invite-card__name">{inv.workspace_name}</span>
+                    <span className="invite-card__detail">
+                      Invited as <strong>{inv.role}</strong>
+                      {inv.invited_by_name && <> by {inv.invited_by_name}</>}
+                    </span>
+                    <span className="invite-card__expiry">
+                      Expires {new Date(inv.expires_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="invite-card__actions">
+                    <button
+                      className="btn-primary btn-ghost--sm"
+                      onClick={() => handleAcceptInvite(inv.id)}
+                      disabled={acceptingInvite === inv.id}
+                    >
+                      {acceptingInvite === inv.id ? (
+                        <Loader2 size={14} className="spin" />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                      Accept
+                    </button>
+                    <button
+                      className="btn-ghost btn-ghost--sm"
+                      onClick={() => handleDeclineInvite(inv.id)}
+                      disabled={decliningInvite === inv.id}
+                      style={{ color: '#ef4444' }}
+                    >
+                      {decliningInvite === inv.id ? (
+                        <Loader2 size={14} className="spin" />
+                      ) : (
+                        <X size={14} />
+                      )}
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Workspaces section */}
         <section className="ws-section">
