@@ -26,10 +26,10 @@
 import type { Font } from '@pdfme/common';
 
 // ---------------------------------------------------------------------------
-// CDN base — raw GitHub URLs for Google's open-source font repository
+// CDN base — jsDelivr mirrors GitHub repos with proper CORS headers
 // ---------------------------------------------------------------------------
-const GH = 'https://github.com/google/fonts/raw/main';
-const LIB = 'https://github.com/shantigilbert/liberation-fonts-ttf/raw/master';
+const GH = 'https://cdn.jsdelivr.net/gh/google/fonts@main';
+const LIB = 'https://cdn.jsdelivr.net/gh/shantigilbert/liberation-fonts-ttf@master';
 
 // ---------------------------------------------------------------------------
 // Font manifest — defines every font + variants we ship
