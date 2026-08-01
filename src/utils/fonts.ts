@@ -28,7 +28,7 @@ import type { Font } from '@pdfme/common';
 // ---------------------------------------------------------------------------
 // CDN base — jsDelivr mirrors GitHub repos with proper CORS headers
 // ---------------------------------------------------------------------------
-const GH = 'https://cdn.jsdelivr.net/gh/google/fonts@main';
+const BASE = 'https://cdn.jsdelivr.net/npm';
 const LIB = 'https://cdn.jsdelivr.net/gh/shantigilbert/liberation-fonts-ttf@master';
 
 // ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ const LIB = 'https://cdn.jsdelivr.net/gh/shantigilbert/liberation-fonts-ttf@mast
 interface FontVariant {
   /** Display name shown in the Designer dropdown */
   label: string;
-  /** Remote URL to the .ttf file */
+  /** Remote URL to the font file */
   url: string;
   /** Whether this variant is the global fallback */
   fallback?: boolean;
@@ -63,56 +63,56 @@ const FONT_MANIFEST: FontVariant[] = [
   { label: 'Courier New Bold Italic',  url: `${LIB}/LiberationMono-BoldItalic.ttf` },
 
   // ── Arimo (alternative sans-serif) ──────────────────────────
-  { label: 'Arimo',              url: `${GH}/apache/arimo/static/Arimo-Regular.ttf` },
-  { label: 'Arimo Bold',         url: `${GH}/apache/arimo/static/Arimo-Bold.ttf` },
-  { label: 'Arimo Italic',       url: `${GH}/apache/arimo/static/Arimo-Italic.ttf` },
-  { label: 'Arimo Bold Italic',  url: `${GH}/apache/arimo/static/Arimo-BoldItalic.ttf` },
+  { label: 'Arimo',              url: `${BASE}/@fontsource/arimo/files/arimo-latin-400-normal.woff` },
+  { label: 'Arimo Bold',         url: `${BASE}/@fontsource/arimo/files/arimo-latin-700-normal.woff` },
+  { label: 'Arimo Italic',       url: `${BASE}/@fontsource/arimo/files/arimo-latin-400-italic.woff` },
+  { label: 'Arimo Bold Italic',  url: `${BASE}/@fontsource/arimo/files/arimo-latin-700-italic.woff` },
 
   // ── Tinos (alternative serif) ───────────────────────────────
-  { label: 'Tinos',              url: `${GH}/apache/tinos/Tinos-Regular.ttf` },
-  { label: 'Tinos Bold',         url: `${GH}/apache/tinos/Tinos-Bold.ttf` },
-  { label: 'Tinos Italic',       url: `${GH}/apache/tinos/Tinos-Italic.ttf` },
-  { label: 'Tinos Bold Italic',  url: `${GH}/apache/tinos/Tinos-BoldItalic.ttf` },
+  { label: 'Tinos',              url: `${BASE}/@fontsource/tinos/files/tinos-latin-400-normal.woff` },
+  { label: 'Tinos Bold',         url: `${BASE}/@fontsource/tinos/files/tinos-latin-700-normal.woff` },
+  { label: 'Tinos Italic',       url: `${BASE}/@fontsource/tinos/files/tinos-latin-400-italic.woff` },
+  { label: 'Tinos Bold Italic',  url: `${BASE}/@fontsource/tinos/files/tinos-latin-700-italic.woff` },
 
   // ── Cousine (alternative monospace) ─────────────────────────
-  { label: 'Cousine',             url: `${GH}/apache/cousine/Cousine-Regular.ttf` },
-  { label: 'Cousine Bold',        url: `${GH}/apache/cousine/Cousine-Bold.ttf` },
-  { label: 'Cousine Italic',      url: `${GH}/apache/cousine/Cousine-Italic.ttf` },
-  { label: 'Cousine Bold Italic', url: `${GH}/apache/cousine/Cousine-BoldItalic.ttf` },
+  { label: 'Cousine',             url: `${BASE}/@fontsource/cousine/files/cousine-latin-400-normal.woff` },
+  { label: 'Cousine Bold',        url: `${BASE}/@fontsource/cousine/files/cousine-latin-700-normal.woff` },
+  { label: 'Cousine Italic',      url: `${BASE}/@fontsource/cousine/files/cousine-latin-400-italic.woff` },
+  { label: 'Cousine Bold Italic', url: `${BASE}/@fontsource/cousine/files/cousine-latin-700-italic.woff` },
 
   // ── Roboto ──────────────────────────────────────────────────
-  { label: 'Roboto',              url: `${GH}/ofl/roboto/static/Roboto-Regular.ttf` },
-  { label: 'Roboto Bold',         url: `${GH}/ofl/roboto/static/Roboto-Bold.ttf` },
-  { label: 'Roboto Italic',       url: `${GH}/ofl/roboto/static/Roboto-Italic.ttf` },
-  { label: 'Roboto Bold Italic',  url: `${GH}/ofl/roboto/static/Roboto-BoldItalic.ttf` },
+  { label: 'Roboto',              url: `${BASE}/@fontsource/roboto/files/roboto-latin-400-normal.woff` },
+  { label: 'Roboto Bold',         url: `${BASE}/@fontsource/roboto/files/roboto-latin-700-normal.woff` },
+  { label: 'Roboto Italic',       url: `${BASE}/@fontsource/roboto/files/roboto-latin-400-italic.woff` },
+  { label: 'Roboto Bold Italic',  url: `${BASE}/@fontsource/roboto/files/roboto-latin-700-italic.woff` },
 
   // ── Open Sans ───────────────────────────────────────────────
-  { label: 'Open Sans',              url: `${GH}/ofl/opensans/static/OpenSans-Regular.ttf` },
-  { label: 'Open Sans Bold',         url: `${GH}/ofl/opensans/static/OpenSans-Bold.ttf` },
-  { label: 'Open Sans Italic',       url: `${GH}/ofl/opensans/static/OpenSans-Italic.ttf` },
-  { label: 'Open Sans Bold Italic',  url: `${GH}/ofl/opensans/static/OpenSans-BoldItalic.ttf` },
+  { label: 'Open Sans',              url: `${BASE}/@fontsource/open-sans/files/open-sans-latin-400-normal.woff` },
+  { label: 'Open Sans Bold',         url: `${BASE}/@fontsource/open-sans/files/open-sans-latin-700-normal.woff` },
+  { label: 'Open Sans Italic',       url: `${BASE}/@fontsource/open-sans/files/open-sans-latin-400-italic.woff` },
+  { label: 'Open Sans Bold Italic',  url: `${BASE}/@fontsource/open-sans/files/open-sans-latin-700-italic.woff` },
 
   // ── Lora (≈ Georgia) ────────────────────────────────────────
-  { label: 'Lora',              url: `${GH}/ofl/lora/static/Lora-Regular.ttf` },
-  { label: 'Lora Bold',         url: `${GH}/ofl/lora/static/Lora-Bold.ttf` },
-  { label: 'Lora Italic',       url: `${GH}/ofl/lora/static/Lora-Italic.ttf` },
-  { label: 'Lora Bold Italic',  url: `${GH}/ofl/lora/static/Lora-BoldItalic.ttf` },
+  { label: 'Lora',              url: `${BASE}/@fontsource/lora/files/lora-latin-400-normal.woff` },
+  { label: 'Lora Bold',         url: `${BASE}/@fontsource/lora/files/lora-latin-700-normal.woff` },
+  { label: 'Lora Italic',       url: `${BASE}/@fontsource/lora/files/lora-latin-400-italic.woff` },
+  { label: 'Lora Bold Italic',  url: `${BASE}/@fontsource/lora/files/lora-latin-700-italic.woff` },
 
   // ── Noto Sans (broad Unicode) ───────────────────────────────
-  { label: 'Noto Sans',              url: `${GH}/ofl/notosans/NotoSans-Regular.ttf` },
-  { label: 'Noto Sans Bold',         url: `${GH}/ofl/notosans/NotoSans-Bold.ttf` },
-  { label: 'Noto Sans Italic',       url: `${GH}/ofl/notosans/NotoSans-Italic.ttf` },
-  { label: 'Noto Sans Bold Italic',  url: `${GH}/ofl/notosans/NotoSans-BoldItalic.ttf` },
+  { label: 'Noto Sans',              url: `${BASE}/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff` },
+  { label: 'Noto Sans Bold',         url: `${BASE}/@fontsource/noto-sans/files/noto-sans-latin-700-normal.woff` },
+  { label: 'Noto Sans Italic',       url: `${BASE}/@fontsource/noto-sans/files/noto-sans-latin-400-italic.woff` },
+  { label: 'Noto Sans Bold Italic',  url: `${BASE}/@fontsource/noto-sans/files/noto-sans-latin-700-italic.woff` },
 
   // ── Merriweather (elegant serif) ────────────────────────────
-  { label: 'Merriweather',              url: `${GH}/ofl/merriweather/Merriweather-Regular.ttf` },
-  { label: 'Merriweather Bold',         url: `${GH}/ofl/merriweather/Merriweather-Bold.ttf` },
-  { label: 'Merriweather Italic',       url: `${GH}/ofl/merriweather/Merriweather-Italic.ttf` },
-  { label: 'Merriweather Bold Italic',  url: `${GH}/ofl/merriweather/Merriweather-BoldItalic.ttf` },
+  { label: 'Merriweather',              url: `${BASE}/@fontsource/merriweather/files/merriweather-latin-400-normal.woff` },
+  { label: 'Merriweather Bold',         url: `${BASE}/@fontsource/merriweather/files/merriweather-latin-700-normal.woff` },
+  { label: 'Merriweather Italic',       url: `${BASE}/@fontsource/merriweather/files/merriweather-latin-400-italic.woff` },
+  { label: 'Merriweather Bold Italic',  url: `${BASE}/@fontsource/merriweather/files/merriweather-latin-700-italic.woff` },
 
   // ── Roboto Slab (slab-serif) ────────────────────────────────
-  { label: 'Roboto Slab',       url: `${GH}/ofl/robotoslab/static/RobotoSlab-Regular.ttf` },
-  { label: 'Roboto Slab Bold',  url: `${GH}/ofl/robotoslab/static/RobotoSlab-Bold.ttf` },
+  { label: 'Roboto Slab',       url: `${BASE}/@fontsource/roboto-slab/files/roboto-slab-latin-400-normal.woff` },
+  { label: 'Roboto Slab Bold',  url: `${BASE}/@fontsource/roboto-slab/files/roboto-slab-latin-700-normal.woff` },
 ];
 
 // ---------------------------------------------------------------------------
