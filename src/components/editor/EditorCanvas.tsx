@@ -12,6 +12,7 @@ import type { Template as PdfmeTemplate } from '@pdfme/common';
 import { Upload, FileText } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import type { IPdfmeTemplate, ISchemaField } from '../../types/pdfme.types';
+import { getPdfmeFonts } from '../../utils/fonts';
 
 /**
  * Extract flat ISchemaField[] from pdfme's schema pages.
@@ -118,9 +119,14 @@ export function EditorCanvas() {
     } as PdfmeTemplate;
 
     try {
+      const font = getPdfmeFonts();
+
       const designer = new Designer({
         domContainer: containerRef.current,
         template,
+        options: {
+          font,
+        },
         plugins: { 
           text, 
           image, 

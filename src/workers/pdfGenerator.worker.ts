@@ -3,6 +3,7 @@ import { text, image, signature, barcodes, checkbox } from '@pdfme/schemas';
 import type { IConditionalRule, IPdfmeTemplate, IValidationRule } from '../types/pdfme.types';
 import type { GenerateProps } from '@pdfme/common';
 import { isImageUrl, isImageDataUri, fetchImageAsDataUrl } from '../utils/imageUtils';
+import { getPdfmeFonts } from '../utils/fonts';
 // Cache bust: 12345
 
 interface WorkerTemplate extends IPdfmeTemplate {
@@ -173,9 +174,14 @@ self.onmessage = async (event: MessageEvent<GenerateJobData>) => {
       basePdf: normalizeBasePdf(effectiveTemplate.basePdf),
     } as GenerateProps['template'];
 
+    const font = getPdfmeFonts();
+
     const pdfBuffer = await generate({
       template: adaptedTemplate,
       inputs: [input],
+      options: {
+        font,
+      },
       plugins: {
         text,
         image,
