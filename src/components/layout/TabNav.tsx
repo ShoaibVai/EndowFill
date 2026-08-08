@@ -17,7 +17,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileText,
   Files,
   FolderKanban,
   HelpCircle,
@@ -134,17 +133,6 @@ export function TabNav() {
     <>
       {/* ── Desktop sidebar ─────────────────────────────────────────── */}
       <aside className="app-sidebar" aria-label="Main navigation">
-        {/* Brand (desktop only — mobile brand lives in the top bar) */}
-        <div className="app-sidebar__brand">
-          <div className="navbar-brand-icon">
-            <FileText className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="app-sidebar__brand-name">EndowFill</div>
-            <div className="app-sidebar__brand-tag">Fill · Generate · Deliver</div>
-          </div>
-        </div>
-
         {/* Workspace group */}
         <div className="app-nav-section">
           <span className="app-nav-section__label">Workspace</span>
