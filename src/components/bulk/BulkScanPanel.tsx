@@ -273,43 +273,42 @@ export function BulkScanPanel() {
           PDF, PNG or JPG — up to {MAX_FILE_BYTES / (1024 * 1024)} MiB per file. Files are scanned
           one at a time on your server&apos;s CPU.
         </p>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <label htmlFor="bulk-scan-dpi" className="text-sm font-medium text-ink-muted dark:text-surface-300">
-            OCR detail
-          </label>
-          <select
-            id="bulk-scan-dpi"
-            value={dpi}
-            onChange={(event) => setDpi(Number(event.target.value))}
-            disabled={isRunning}
-            className="rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-sm font-medium text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
-          >
-            <option value={150}>150 DPI — Fast (CPU)</option>
-            <option value={300}>300 DPI — Balanced (recommended)</option>
-            <option value={600}>600 DPI — Highest quality</option>
-          </select>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={(event) => {
-              event.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-            disabled={isRunning}
-          >
-            <Files className="h-4 w-4" />
-            Choose files
-          </button>
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED_EXTENSIONS}
-          multiple
-          className="hidden"
-          onChange={handleInputChange}
-        />
       </div>
+
+      {/* Controls row — outside the drop zone */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <label htmlFor="bulk-scan-dpi" className="text-sm font-medium text-ink-muted dark:text-surface-300">
+          OCR detail
+        </label>
+        <select
+          id="bulk-scan-dpi"
+          value={dpi}
+          onChange={(event) => setDpi(Number(event.target.value))}
+          disabled={isRunning}
+          className="rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-sm font-medium text-ink focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+        >
+          <option value={150}>150 DPI — Fast (CPU)</option>
+          <option value={300}>300 DPI — Balanced (recommended)</option>
+          <option value={600}>600 DPI — Highest quality</option>
+        </select>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isRunning}
+        >
+          <Files className="h-4 w-4" />
+          Choose files
+        </button>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_EXTENSIONS}
+        multiple
+        className="hidden"
+        onChange={handleInputChange}
+      />
 
       {/* Rejections (files that could not be queued) */}
       {rejections.length > 0 && (
