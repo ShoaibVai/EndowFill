@@ -116,6 +116,10 @@ function buildBody(request: ChatRequest, withJsonMode: boolean): Record<string, 
 
   const body: Record<string, unknown> = {
     model: config.openCodeGoModel,
+    // Kimi (and other reasoning models) surface their chain-of-thought in
+    // content when it runs long, consuming the whole token budget before any
+    // JSON is emitted. Disable thinking: these endpoints demand JSON only.
+    thinking: { type: 'disabled' },
     messages: [
       { role: 'system', content: request.system },
       { role: 'user', content: userContent },
