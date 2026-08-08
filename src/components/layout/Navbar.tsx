@@ -1,5 +1,9 @@
 /**
- * Navbar.tsx — Top navigation bar with branding and status indicators.
+ * Navbar.tsx — Top action bar: brand (mobile), active file pill, save
+ * status, Save button, guided tour, and theme toggle.
+ *
+ * The primary navigation lives in TabNav (sidebar / bottom bar); this bar
+ * stays focused on the current template + save flow.
  */
 
 import { FileText, Save, Clock, Cloud, HelpCircle } from 'lucide-react';
@@ -13,7 +17,7 @@ export function Navbar() {
   const hasUnsavedChanges = useAppStore((s) => s.hasUnsavedChanges);
   const pdfFileName = useAppStore((s) => s.pdfFileName);
   const { startTour } = useHelpTour();
-  
+
   const addNotification = useAppStore((s) => s.addNotification);
   const pdfmeTemplate = useAppStore((s) => s.pdfmeTemplate);
   const basePdfBuffer = useAppStore((s) => s.basePdfBuffer);
@@ -32,7 +36,7 @@ export function Navbar() {
       addNotification({ message: 'No active template or workspace to save', level: 'warning' });
       return;
     }
-    
+
     try {
       const patch = {
         name: pdfFileName || 'Untitled Template',
@@ -55,7 +59,7 @@ export function Navbar() {
         });
         setCurrentProjectId(created.id);
       }
-      
+
       setLastSavedAt(Date.now());
       setHasUnsavedChanges(false);
       addNotification({ message: 'Project saved successfully to Cloud!', level: 'success' });
@@ -64,70 +68,66 @@ export function Navbar() {
     }
   };
 
-
   const formatTime = (ts: number) => {
     const d = new Date(ts);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div className="px-6 py-3 flex items-center justify-between">
-      {/* Brand */}
-      <div className="flex items-center gap-3">
+    <div className="navbar-row">
+      {/* Brand — mobile only (desktop brand lives in the sidebar) */}
+      <div className="navbar-brand lg:hidden">
         <div className="navbar-brand-icon">
-          <FileText className="w-5 h-5 text-white" />
+          <FileText className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
-            EndowFill
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Fill · Generate · Deliver
-          </p>
+          <div className="navbar-brand-text">EndowFill</div>
+          <div className="navbar-brand-tag">Fill · Generate · Deliver</div>
         </div>
       </div>
 
-      {/* Center — Active file */}
+      {/* Active file pill */}
       {pdfFileName && (
-        <div className="navbar-file-pill">
-          <FileText className="w-4 h-4 navbar-file-icon" />
-          <span className="navbar-file-text">
-            {pdfFileName}
-          </span>
+        <div className="hidden md:flex">
+          <div className="navbar-file-pill">
+            <FileText className="w-4 h-4 navbar-file-icon" />
+            <span className="navbar-file-text">{pdfFileName}</span>
+          </div>
         </div>
       )}
 
-      {/* Right — Save status */}
-      <div className="flex items-center gap-3">
+      {/* Right — save status + actions */}
+      <div className="navbar-actions">
         {hasUnsavedChanges && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-fade-in">
+          <span className="badge badge-warning animate-fade-in">
             <Save className="w-3 h-3" />
             Unsaved
           </span>
         )}
         {lastSavedAt && !hasUnsavedChanges && (
-          <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span className="hidden sm:flex items-center gap-1.5 text-xs text-ink-muted font-medium">
             <Clock className="w-3.5 h-3.5" />
             Saved {formatTime(lastSavedAt)}
           </span>
         )}
-        <button 
-          onClick={saveToCloud} 
+        <button
+          onClick={saveToCloud}
           disabled={!basePdfBuffer || !activeWorkspaceId}
           aria-label="Save project to cloud"
           className="navbar-btn navbar-btn--primary"
         >
           <Cloud className="w-4 h-4" /> Save
         </button>
-        <button 
-          onClick={startTour} 
+        <button
+          id="help-tour-btn"
+          onClick={startTour}
           aria-label="Start guided tour"
           title="Start Guided Tour"
-          className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 transition-colors"
+          className="navbar-icon-btn"
         >
           <HelpCircle className="w-5 h-5" />
         </button>
-        <div className="ml-1 pl-3 border-l border-slate-200 dark:border-slate-700">
+        <div className="ml-1 pl-3 border-l" style={{ borderColor: 'var(--border-subtle)' }}>
           <ThemeToggle />
         </div>
       </div>

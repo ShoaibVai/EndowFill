@@ -4,12 +4,22 @@
  * This component is lazy-loaded from App.tsx so the auth/landing
  * experience is fully separate from the heavy PDF editor bundle.
  *
- * It keeps the original tab-nav, auto-save, notifications, and theme
- * logic untouched, but accepts an optional `initialTab` prop that
- * lets the HomePage's quick-action cards deep-link into a specific tab.
+ * Layout (EndowFill Design System v2):
+ *   ┌────────────────────────────────────────────────┐
+ *   │ header: Navbar (brand/file/save/help/theme)    │
+ *   ├──────────────┬─────────────────────────────────┤
+ *   │ sidebar (lg) │ main — active page              │
+ *   │ durable nav  │                                 │
+ *   ├──────────────┴─────────────────────────────────┤
+ *   │ bottom tab bar (mobile) + More drawer          │
+ *   └────────────────────────────────────────────────┘
+ *
+ * The navigation is ALWAYS visible (never renders null), so every tab —
+ * including the AI Scan / Form Fields / Bulk Scan / Bulk Generate pages —
+ * is reachable from any view.
  */
 
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { TabNav } from './components/layout/TabNav';
@@ -19,6 +29,7 @@ import { useAutoSave } from './hooks/useAutoSave';
 import { WorkspaceService } from './services/workspace.service';
 import { TemplateService } from './services/template.service';
 import { base64ToArrayBuffer } from './utils/bufferUtils';
+import type { ExtractedItem } from './types/scan.types';
 
 const EditorPage = lazy(() =>
   import('./pages/EditorPage').then((m) => ({ default: m.EditorPage }))
@@ -29,10 +40,17 @@ const BulkGeneratePage = lazy(() =>
 const ProjectsPage = lazy(() =>
   import('./pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage }))
 );
+const AIScanPage = lazy(() =>
+  import('./pages/AIScanPage').then((m) => ({ default: m.AIScanPage }))
+);
+const AIFieldsPage = lazy(() =>
+  import('./pages/AIFieldsPage').then((m) => ({ default: m.AIFieldsPage }))
+);
+const BulkScanPage = lazy(() =>
+  import('./pages/BulkScanPage').then((m) => ({ default: m.BulkScanPage }))
+);
 
-interface WorkspaceShellProps {}
-
-export default function WorkspaceShell({}: WorkspaceShellProps) {
+export default function WorkspaceShell() {
   const location = useLocation();
   const activeTab = useAppStore((s) => s.activeTab);
   const notifications = useAppStore((s) => s.notifications);
@@ -49,10 +67,22 @@ export default function WorkspaceShell({}: WorkspaceShellProps) {
   const setFieldBindings = useAppStore((s) => s.setFieldBindings);
   const setValidationRules = useAppStore((s) => s.setValidationRules);
   const setConditionalRules = useAppStore((s) => s.setConditionalRules);
+  const setExtractedItems = useAppStore((s) => s.setExtractedItems);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
 
   // Auto-save template to Supabase
   useAutoSave();
+
+  /**
+   * AI Scan handoff: keep the reviewed items in the store so the Bulk
+   * Generate tab's "AI Scans" source mode can map them onto template fields.
+   */
+  const handleScanExtracted = useCallback(
+    (items: ExtractedItem[]) => {
+      setExtractedItems(items);
+    },
+    [setExtractedItems]
+  );
 
   // Auto-dismiss notifications after their duration
   useEffect(() => {
@@ -133,8 +163,9 @@ export default function WorkspaceShell({}: WorkspaceShellProps) {
 
   if (isBootstrapping) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-slate-500 animate-pulse">
-        Loading workspace…
+      <div className="auth-splash" role="status">
+        <div className="auth-splash__spinner" aria-hidden="true" />
+        <p className="auth-splash__text">Opening workspace…</p>
       </div>
     );
   }
@@ -142,35 +173,53 @@ export default function WorkspaceShell({}: WorkspaceShellProps) {
   return (
     <ErrorBoundary>
       <div className="app-shell">
+        {/* Top bar: brand (mobile), file pill, save status, help, theme */}
         <header className="app-header">
           <Navbar />
-          <TabNav />
         </header>
 
-        {/* Main content */}
-        <main className="flex-1 flex flex-col min-h-0 relative">
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center p-12 text-slate-500 animate-pulse">
-                Loading workspace…
-              </div>
-            }
-          >
-            {activeTab === 'projects' ? (
-              <ErrorBoundary>
-                <ProjectsPage />
-              </ErrorBoundary>
-            ) : activeTab === 'editor' ? (
-              <ErrorBoundary>
-                <EditorPage />
-              </ErrorBoundary>
-            ) : (
-              <ErrorBoundary>
-                <BulkGeneratePage />
-              </ErrorBoundary>
-            )}
-          </Suspense>
-        </main>
+        {/* Sidebar + content */}
+        <div className="app-body">
+          {/* Durable navigation — desktop sidebar, mobile bottom bar + drawer */}
+          <TabNav />
+
+          {/* Main content */}
+          <main className="app-main" id="app-main">
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center p-12 text-ink-muted animate-pulse">
+                  Loading workspace…
+                </div>
+              }
+            >
+              {activeTab === 'projects' ? (
+                <ErrorBoundary>
+                  <ProjectsPage />
+                </ErrorBoundary>
+              ) : activeTab === 'editor' ? (
+                <ErrorBoundary>
+                  <EditorPage />
+                </ErrorBoundary>
+              ) : activeTab === 'scan' ? (
+                <ErrorBoundary>
+                  <AIScanPage onExtracted={handleScanExtracted} />
+                </ErrorBoundary>
+              ) : activeTab === 'form-fields' ? (
+                <ErrorBoundary>
+                  <AIFieldsPage />
+                </ErrorBoundary>
+              ) : activeTab === 'bulk-scan' ? (
+                <ErrorBoundary>
+                  <BulkScanPage />
+                </ErrorBoundary>
+              ) : (
+                <ErrorBoundary>
+                  <BulkGeneratePage />
+                </ErrorBoundary>
+              )}
+            </Suspense>
+          </main>
+        </div>
 
         {/* Toast notifications */}
         {notifications.length > 0 && (

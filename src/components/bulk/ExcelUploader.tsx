@@ -83,10 +83,10 @@ export function ExcelUploader() {
           )}
         </div>
         
-        <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-surface-800)' }}>
+        <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-main)' }}>
           {isDragging ? 'Drop file to upload' : 'Upload Excel Data'}
         </h3>
-        <p className="text-sm max-w-md mb-6 text-center" style={{ color: 'var(--color-surface-400)' }}>
+        <p className="text-sm max-w-md mb-6 text-center" style={{ color: 'var(--text-muted)' }}>
           Upload a .xlsx or .csv file containing the data you want to populate into the PDF template. The first row must contain column headers.
         </p>
 

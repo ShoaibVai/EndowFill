@@ -320,7 +320,7 @@ export function WorkspacePage({ user }: WorkspacePageProps) {
           </div>
         ) : templates.length === 0 ? (
           <div className="ws-empty">
-            <FileText size={40} style={{ color: 'var(--color-surface-300)' }} />
+            <FileText size={40} style={{ color: 'var(--text-faint)' }} />
             <p>No templates yet in this workspace.</p>
             {canEdit && (
               <button id="ws-empty-create-btn" className="btn-primary" onClick={handleCreateTemplate}>

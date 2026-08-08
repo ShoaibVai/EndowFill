@@ -3,6 +3,7 @@ import { zipSync } from 'fflate';
 import { useAppStore } from '../store/useAppStore';
 import type { GenerateJobData, GenerateJobResult, IFieldValidationError } from '../workers/pdfGenerator.worker';
 import { isCheckboxField, normalizeCheckboxValue } from '../utils/excelHelpers';
+import type { BulkScanResult, ExtractedItem } from '../types/scan.types';
 
 // Define the worker script import for Vite
 import PdfWorker from '../workers/pdfGenerator.worker?worker';
@@ -11,14 +12,99 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
+// ── AI source-mode helpers ───────────────────────────────────────────────────
+
+/** One generation record: a scanned file plus its extracted items. */
+interface AiRecord {
+  filename: string;
+  items: ExtractedItem[];
+}
+
+/**
+ * Resolve the records to generate from: bulk scan results when present
+ * (one record per file), otherwise the single reviewed scan's items.
+ */
+function resolveAiRecords(
+  bulkResults: BulkScanResult[],
+  singleItems: ExtractedItem[],
+  fallbackName: string
+): AiRecord[] {
+  if (bulkResults.length > 0) {
+    return bulkResults.map((result) => ({ filename: result.filename, items: result.items }));
+  }
+  if (singleItems.length > 0) {
+    return [{ filename: fallbackName || 'scan', items: singleItems }];
+  }
+  return [];
+}
+
+/**
+ * Build the pdfme input for one record. Bindings reference the representative
+ * item id (from the mapping UI); each record resolves it by id first, then
+ * falls back to a case-insensitive LABEL match — ids differ per file in bulk
+ * scans, labels are the stable join key.
+ */
+function buildAiInput(
+  record: AiRecord,
+  repItems: ExtractedItem[],
+  bindings: ReturnType<typeof useAppStore.getState>['fieldBindings'],
+  fields: ReturnType<typeof useAppStore.getState>['schemaFields']
+): Record<string, string> {
+  const input: Record<string, string> = {};
+  bindings.forEach((binding) => {
+    if (!binding.sourceItemId) return;
+    const rep = repItems.find((item) => item.id === binding.sourceItemId);
+    const item =
+      record.items.find((candidate) => candidate.id === binding.sourceItemId) ??
+      (rep
+        ? record.items.find(
+            (candidate) =>
+              candidate.label.trim().toLowerCase() === rep.label.trim().toLowerCase()
+          )
+        : undefined);
+    if (!item) return;
+
+    let rawValue = item.value ?? '';
+    const schemaField = fields.find((field) => field.name === binding.schemaFieldId);
+    if (schemaField && isCheckboxField(schemaField)) {
+      rawValue = normalizeCheckboxValue(rawValue);
+    }
+    input[binding.schemaFieldId] = rawValue;
+  });
+  return input;
+}
+
+/** AI-mode filename: {source_file}, {Item Label} and {row_number} tokens. */
+function buildAiFilename(pattern: string, record: AiRecord, index: number): string {
+  let filename = pattern || '{source_file}';
+  filename = filename.replaceAll(
+    '{source_file}',
+    record.filename.replace(/\.[^.]+$/, '') || `record_${index + 1}`
+  );
+  record.items.forEach((item) => {
+    if (!item.label) return;
+    const placeholder = `{${item.label}}`;
+    if (filename.includes(placeholder)) {
+      filename = filename.replaceAll(placeholder, item.value ?? '');
+    }
+  });
+  filename = filename.replaceAll('{row_number}', String(index + 1));
+  if (!filename.toLowerCase().endsWith('.pdf')) filename += '.pdf';
+  return filename.replace(/[/\\?%*:|"<>]/g, '-');
+}
+
 export function useGenerationEngine() {
   const pdfmeTemplate = useAppStore((s) => s.pdfmeTemplate);
+  const pdfFileName = useAppStore((s) => s.pdfFileName);
   const excelRows = useAppStore((s) => s.excelRows);
   const excelColumns = useAppStore((s) => s.excelColumns);
   const fieldBindings = useAppStore((s) => s.fieldBindings);
   const schemaFields = useAppStore((s) => s.schemaFields);
   const validationRules = useAppStore((s) => s.validationRules || []);
   const conditionalRules = useAppStore((s) => s.conditionalRules || []);
+  const dataSourceMode = useAppStore((s) => s.dataSourceMode);
+  const extractedItems = useAppStore((s) => s.extractedItems);
+  const bulkExtractedResults = useAppStore((s) => s.bulkExtractedResults);
   
   const generationJob = useAppStore((s) => s.generationJob);
   const setGenerationJob = useAppStore((s) => s.setGenerationJob);
@@ -83,13 +169,88 @@ export function useGenerationEngine() {
   }, [setGenerationJob, addNotification]);
 
   const startGeneration = useCallback((filenamePattern: string) => {
-    if (!pdfmeTemplate || excelRows.length === 0 || fieldBindings.length === 0) {
+    if (!pdfmeTemplate || fieldBindings.length === 0) {
       addNotification({ message: 'Missing required data for generation', level: 'error' });
       return;
     }
 
     const jobId = `job-${Date.now()}`;
-    const totalRows = excelRows.length;
+    const templateWithRules = { ...pdfmeTemplate, validationRules, conditionalRules };
+
+    // ── Build per-record jobs from the active data source ──
+    let jobs: GenerateJobData[];
+
+    if (dataSourceMode === 'ai') {
+      const records = resolveAiRecords(bulkExtractedResults, extractedItems, pdfFileName);
+      const repItems = records[0]?.items ?? [];
+      jobs = records.map((record, index) => ({
+        jobId,
+        rowIndex: index,
+        template: templateWithRules,
+        input: buildAiInput(record, repItems, fieldBindings, schemaFields),
+        filename: buildAiFilename(filenamePattern, record, index),
+      }));
+      if (jobs.length === 0) {
+        addNotification({
+          message: 'No AI scan data available — scan a document first.',
+          level: 'error',
+        });
+        return;
+      }
+    } else {
+      if (excelRows.length === 0) {
+        addNotification({ message: 'Missing required data for generation', level: 'error' });
+        return;
+      }
+      jobs = excelRows.map((row, index) => {
+        // Create the input object based on field bindings
+        const input: Record<string, string> = {};
+        fieldBindings.forEach((binding) => {
+          const column = excelColumns.find((c) => c.index === binding.excelColumnIndex);
+          if (column) {
+            let rawValue = String(row[column.header] || '');
+
+            // Normalize checkbox fields: pdfme checkbox plugin expects "true" or "false"
+            const schemaField = schemaFields.find((f) => f.name === binding.schemaFieldId);
+            if (schemaField && isCheckboxField(schemaField)) {
+              rawValue = normalizeCheckboxValue(rawValue);
+            }
+
+            input[binding.schemaFieldId] = rawValue;
+          }
+        });
+
+        // Simple filename pattern replacement (e.g., invoice_{Name}.pdf)
+        let filename = filenamePattern || `document_${index + 1}.pdf`;
+        excelColumns.forEach((col) => {
+          const placeholder = `{${col.header}}`;
+          if (filename.includes(placeholder)) {
+            filename = filename.replaceAll(placeholder, String(row[col.header] || ''));
+          }
+        });
+        // Replace {row_number}
+        filename = filename.replaceAll('{row_number}', String(index + 1));
+
+        // Ensure ends with .pdf
+        if (!filename.toLowerCase().endsWith('.pdf')) {
+          filename += '.pdf';
+        }
+
+        // Sanitize
+        filename = filename.replace(/[/\\?%*:|"<>]/g, '-');
+
+        return {
+          jobId,
+          rowIndex: index,
+          // Include validation rules with the template so the worker can pre-flight validate
+          template: templateWithRules,
+          input,
+          filename,
+        };
+      });
+    }
+
+    const totalRows = jobs.length;
 
     // Initialize job state
     setGenerationJob({
@@ -99,7 +260,7 @@ export function useGenerationEngine() {
       totalRows,
       completedRows: 0,
       startedAt: Date.now(),
-      rows: excelRows.map((_, i) => ({
+      rows: jobs.map((_, i) => ({
         rowIndex: i,
         status: 'queued',
         filename: '', // Will be set during generation
@@ -107,54 +268,6 @@ export function useGenerationEngine() {
     });
 
     buffersRef.current = {};
-
-    // Prepare generation data
-    const jobs: GenerateJobData[] = excelRows.map((row, index) => {
-      // Create the input object based on field bindings
-      const input: Record<string, string> = {};
-      fieldBindings.forEach((binding) => {
-        const column = excelColumns.find((c) => c.index === binding.excelColumnIndex);
-        if (column) {
-          let rawValue = String(row[column.header] || '');
-
-          // Normalize checkbox fields: pdfme checkbox plugin expects "true" or "false"
-          const schemaField = schemaFields.find((f) => f.name === binding.schemaFieldId);
-          if (schemaField && isCheckboxField(schemaField)) {
-            rawValue = normalizeCheckboxValue(rawValue);
-          }
-
-          input[binding.schemaFieldId] = rawValue;
-        }
-      });
-
-      // Simple filename pattern replacement (e.g., invoice_{Name}.pdf)
-      let filename = filenamePattern || `document_${index + 1}.pdf`;
-      excelColumns.forEach((col) => {
-        const placeholder = `{${col.header}}`;
-        if (filename.includes(placeholder)) {
-          filename = filename.replaceAll(placeholder, String(row[col.header] || ''));
-        }
-      });
-      // Replace {row_number}
-      filename = filename.replaceAll('{row_number}', String(index + 1));
-      
-      // Ensure ends with .pdf
-      if (!filename.toLowerCase().endsWith('.pdf')) {
-        filename += '.pdf';
-      }
-      
-      // Sanitize
-      filename = filename.replace(/[/\\?%*:|"<>]/g, '-');
-
-      return {
-        jobId,
-        rowIndex: index,
-        // Include validation rules with the template so the worker can pre-flight validate
-        template: { ...pdfmeTemplate, validationRules, conditionalRules },
-        input,
-        filename,
-      };
-    });
 
     // Determine concurrency (max 4 workers)
     const concurrency = Math.min(4, navigator.hardwareConcurrency || 2);
@@ -234,11 +347,16 @@ export function useGenerationEngine() {
     }
   }, [
     pdfmeTemplate,
+    pdfFileName,
     excelRows,
     excelColumns,
     fieldBindings,
     validationRules,
     conditionalRules,
+    dataSourceMode,
+    extractedItems,
+    bulkExtractedResults,
+    schemaFields,
     setGenerationJob,
     addNotification,
     dispatchNext,

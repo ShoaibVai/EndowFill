@@ -39,7 +39,7 @@ export function EditorSidebar() {
       className="flex flex-col h-full rounded-xl overflow-hidden"
       style={{
         background: 'var(--color-surface-0)',
-        border: '1px solid var(--color-surface-200)',
+        border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-glass)',
         width: '300px',
         minWidth: '300px',
@@ -52,7 +52,7 @@ export function EditorSidebar() {
       >
         <div className="flex items-center gap-2">
           <ListFilter className="w-4 h-4" style={{ color: 'var(--color-primary-500)' }} />
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-surface-800)' }}>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
             Template Fields
           </h2>
         </div>
@@ -67,7 +67,7 @@ export function EditorSidebar() {
           <div className="relative">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-              style={{ color: 'var(--color-surface-400)' }}
+              style={{ color: 'var(--text-muted)' }}
             />
             <input
               type="text"
@@ -77,9 +77,9 @@ export function EditorSidebar() {
               id="field-search-input"
               className="w-full pl-9 pr-3 py-2 text-sm rounded-lg outline-none transition-all duration-150"
               style={{
-                background: 'var(--color-surface-50)',
-                border: '1px solid var(--color-surface-200)',
-                color: 'var(--color-surface-700)',
+                background: 'var(--bg-inset)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-main)',
               }}
             />
           </div>
@@ -96,7 +96,7 @@ export function EditorSidebar() {
           />
         ) : filtered.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm" style={{ color: 'var(--color-surface-400)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               No fields match "{search}"
             </p>
           </div>
@@ -107,17 +107,17 @@ export function EditorSidebar() {
               return (
                 <div key={groupName} className="flex flex-col gap-1">
                   <div
-                    className="flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded-md hover:bg-surface-50 transition-colors"
+                    className="flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded-md hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                     onClick={() => toggleGroup(groupName)}
                   >
                     {isCollapsed ? (
-                      <ChevronRight className="w-4 h-4 text-surface-400" />
+                      <ChevronRight className="w-4 h-4 text-ink-faint" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-surface-400" />
+                      <ChevronDown className="w-4 h-4 text-ink-faint" />
                     )}
                     <Folder className="w-3.5 h-3.5 text-primary-400" />
-                    <span className="text-xs font-semibold text-surface-700 select-none">
-                      {groupName} <span className="text-surface-400 font-normal">({fields.length})</span>
+                    <span className="text-xs font-semibold text-ink select-none">
+                      {groupName} <span className="text-ink-faint font-normal">({fields.length})</span>
                     </span>
                   </div>
                   {!isCollapsed && (
@@ -150,7 +150,7 @@ export function EditorSidebar() {
           className="px-4 py-2.5 flex items-center justify-between text-xs"
           style={{
             borderTop: '1px solid var(--color-surface-100)',
-            color: 'var(--color-surface-400)',
+            color: 'var(--text-muted)',
           }}
         >
           <span>

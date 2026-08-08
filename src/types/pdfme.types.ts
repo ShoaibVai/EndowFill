@@ -70,12 +70,14 @@ export interface IExcelColumn {
   sampleValues: string[];
 }
 
-/** Binding between a pdfme schema field and an Excel column. */
+/** Binding between a pdfme schema field and a data source (Excel column or AI-extracted item). */
 export interface IFieldBinding {
   /** pdfme field name */
   schemaFieldId: string;
-  /** Excel column index to pull data from */
-  excelColumnIndex: number;
+  /** Excel column index to pull data from (Excel source mode) */
+  excelColumnIndex?: number;
+  /** AI-extracted item id to pull data from (AI scan source mode) */
+  sourceItemId?: string;
   /** Optional data transform to apply */
   transform?: 'uppercase' | 'lowercase' | 'trim' | 'dateFormat';
   /** Extra arguments for the transform (e.g., date format pattern) */
@@ -151,7 +153,10 @@ export interface IGenerationJob {
 // ---------------------------------------------------------------------------
 
 /** Which tab is active in the main navigation. */
-export type ActiveTab = 'projects' | 'editor' | 'generate';
+export type ActiveTab = 'projects' | 'editor' | 'generate' | 'scan' | 'form-fields' | 'bulk-scan';
+
+/** Which data source feeds bulk generation. */
+export type DataSourceMode = 'excel' | 'ai';
 
 /** Notification levels for toast messages. */
 export type NotificationLevel = 'info' | 'success' | 'warning' | 'error';

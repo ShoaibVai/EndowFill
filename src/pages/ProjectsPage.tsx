@@ -21,6 +21,7 @@ import {
   X,
   Building2,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
@@ -28,6 +29,7 @@ import { TemplateService } from '../services/template.service';
 import type { WorkspaceTemplate } from '../services/template.service';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/bufferUtils';
 import type { ISchemaPage } from '../types/pdfme.types';
+import { PageHeader } from '../components/ui/PageHeader';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -224,12 +226,12 @@ export function ProjectsPage() {
   if (!activeWorkspaceId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-500">
+        <div className="empty-state__icon">
           <AlertTriangle className="w-8 h-8" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No Workspace Selected</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
+          <h3 className="text-lg font-semibold text-ink mb-1">No Workspace Selected</h3>
+          <p className="text-sm text-ink-muted max-w-sm">
             Select a workspace from the home page to manage its templates here.
           </p>
         </div>
@@ -246,83 +248,79 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in overflow-y-auto bg-slate-50 dark:bg-slate-950">
-      <div className="max-w-7xl mx-auto flex flex-col gap-8">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 animate-fade-in bg-transparent">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-              <FolderKanban className="w-6 h-6" />
+        <PageHeader
+          icon={<FolderKanban className="w-6 h-6" />}
+          title="Templates"
+          subtitle="Manage your saved PDF templates and field mappings"
+          actions={
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept=".pdftemplate"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleImport}
+                tabIndex={-1}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="btn btn-ghost btn-sm"
+                id="import-template-btn"
+              >
+                <Upload className="w-4 h-4" />
+                Import
+              </button>
+              <button
+                onClick={handleCreateNew}
+                className="btn btn-primary btn-sm"
+                id="new-template-btn"
+              >
+                <Plus className="w-4 h-4" />
+                New Template
+              </button>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Templates
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Manage your saved PDF templates and field mappings
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="file"
-              accept=".pdftemplate"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleImport}
-              tabIndex={-1}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              id="import-template-btn"
-            >
-              <Upload className="w-4 h-4" />
-              Import
-            </button>
-            <button
-              onClick={handleCreateNew}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white shadow-sm hover:bg-primary-700 transition-colors"
-              id="new-template-btn"
-            >
-              <Plus className="w-4 h-4" />
-              New Template
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Grid */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 animate-pulse">
-            <div className="w-8 h-8 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mb-4" />
+          <div className="flex flex-col items-center justify-center py-20 text-ink-muted animate-pulse">
+            <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mb-4" />
             Loading templates…
           </div>
         ) : templates.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-4">
-            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center">
-              <FolderKanban className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+          <div className="card flex flex-col items-center justify-center gap-4 p-12 text-center" style={{ border: '2px dashed var(--border-strong)' }}>
+            <div className="empty-state__icon">
+              <FolderKanban className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No templates yet</h3>
-              <p className="text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+              <h3 className="text-lg font-bold text-ink">No templates yet</h3>
+              <p className="text-ink-muted max-w-sm mt-1">
                 Create your first template to start designing and mapping your PDFs.
               </p>
             </div>
             <button
               onClick={handleCreateNew}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 mt-2 rounded-lg text-sm font-medium bg-primary-600 text-white shadow-sm hover:bg-primary-700 transition-colors"
+              className="btn btn-primary mt-2"
             >
+              <Plus className="w-4 h-4" />
               Create New Template
             </button>
+            <p className="text-xs text-ink-faint flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Tip: use Form Fields to turn an existing PDF into a fillable template automatically.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {templates.map((tpl) => (
               <div
                 key={tpl.id}
-                className="group relative flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-red-300 dark:hover:border-red-700 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 overflow-hidden"
+                className="group relative flex flex-col card rounded-xl overflow-hidden transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                 onClick={() => handleOpenTemplate(tpl)}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -336,14 +334,14 @@ export function ProjectsPage() {
                 id={`tpl-card-${tpl.id}`}
               >
                 {/* Thumbnail */}
-                <div className="aspect-[4/3] bg-slate-50 dark:bg-slate-800/50 flex flex-col items-center justify-center border-b border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                <div className="aspect-[4/3] bg-inset flex flex-col items-center justify-center border-b border-subtle relative overflow-hidden">
                   {tpl.thumbnail_b64 ? (
                     <img src={`data:image/png;base64,${tpl.thumbnail_b64}`} alt={tpl.name} className="w-full h-full object-cover" />
                   ) : (
-                    <FileText className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-2 transition-transform group-hover:scale-110 duration-300" />
+                    <FileText className="w-12 h-12 text-ink-faint mb-2 transition-transform group-hover:scale-110 duration-300" />
                   )}
-                  <div className="absolute inset-0 bg-red-900/5 dark:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
-                    <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-red-600 shadow-sm">
+                  <div className="absolute inset-0 bg-primary-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+                    <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-surface text-primary-600 shadow-md">
                       Open Template
                     </span>
                   </div>
@@ -352,10 +350,10 @@ export function ProjectsPage() {
                 {/* Info */}
                 <div className="p-4 flex-1 flex flex-col">
                   {/* Hover action buttons */}
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-surface/90 backdrop-blur-sm p-1 rounded-lg border border-subtle shadow-sm">
                     <button
                       onClick={(e) => startEditing(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-ink-faint hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-md transition-colors"
                       title="Rename"
                       aria-label="Rename template"
                     >
@@ -363,7 +361,7 @@ export function ProjectsPage() {
                     </button>
                     <button
                       onClick={(e) => handleDuplicate(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-ink-faint hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-md transition-colors"
                       title="Duplicate"
                       aria-label="Duplicate template"
                     >
@@ -371,7 +369,7 @@ export function ProjectsPage() {
                     </button>
                     <button
                       onClick={(e) => handleExport(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-ink-faint hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-md transition-colors"
                       title="Export"
                       aria-label="Export template"
                     >
@@ -379,7 +377,7 @@ export function ProjectsPage() {
                     </button>
                     <button
                       onClick={(e) => handleDelete(tpl, e)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                      className="p-1.5 text-ink-faint hover:text-error-600 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-md transition-colors"
                       title="Delete"
                       aria-label="Delete template"
                     >
@@ -396,20 +394,20 @@ export function ProjectsPage() {
                         onChange={(e) => setEditName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && saveRename(tpl, e)}
                         autoFocus
-                        className="flex-1 w-full text-sm font-semibold bg-transparent border-b-2 border-red-500 focus:outline-none text-slate-900 dark:text-white px-1 py-0.5"
+                        className="flex-1 w-full text-sm font-semibold bg-transparent border-b-2 border-primary-500 focus:outline-none text-ink px-1 py-0.5"
                       />
-                      <button onClick={(e) => saveRename(tpl, e)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded" aria-label="Save rename">
+                      <button onClick={(e) => saveRename(tpl, e)} className="p-1 text-success-600 hover:bg-success-50 dark:hover:bg-success-500/10 rounded" aria-label="Save rename">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" aria-label="Cancel rename">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="p-1 text-error-600 hover:bg-error-50 dark:hover:bg-error-500/10 rounded" aria-label="Cancel rename">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <h3 className="font-semibold text-slate-900 dark:text-white truncate pr-6">{tpl.name}</h3>
+                    <h3 className="font-semibold text-ink truncate pr-6">{tpl.name}</h3>
                   )}
 
-                  <div className="mt-auto pt-3 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="mt-auto pt-3 flex items-center gap-3 text-xs text-ink-muted">
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
                       {new Date(tpl.updated_at).toLocaleDateString()}

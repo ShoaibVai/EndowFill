@@ -1,0 +1,22 @@
+{
+  "name": "endowfill-ai-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "EndowFill AI backend - OCR, extraction and form-field detection via OpenCode Go (Kimi).",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

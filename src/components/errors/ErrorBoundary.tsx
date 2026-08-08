@@ -32,28 +32,44 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center p-6 h-screen bg-slate-50">
-          <div className="max-w-xl w-full bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
-            <p className="text-sm text-slate-600 mb-4">
+        <div className="flex items-center justify-center p-6 min-h-full bg-transparent">
+          <div className="max-w-xl w-full bg-surface border border-subtle shadow-lg rounded-2xl p-8 text-center">
+            <div className="empty-state__icon mx-auto">
+              <svg
+                className="w-7 h-7"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4" />
+                <path d="M12 16h.01" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-ink mt-4">Something went wrong</h2>
+            <p className="text-sm text-ink-muted mt-2 mb-4">
               An unexpected error occurred. You can try to recover the app or reload the page.
             </p>
             {this.state.error && (
-              <details className="mb-4 text-xs text-rose-700 whitespace-pre-wrap">
+              <details className="mb-4 text-xs text-error-600 dark:text-error-400 whitespace-pre-wrap text-left bg-inset rounded-lg p-3">
                 {this.state.error.toString()}
               </details>
             )}
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-center">
               <button
                 onClick={this.reset}
-                className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-800"
+                className="btn btn-primary btn-sm"
                 aria-label="Try to recover application"
               >
                 Try to recover
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 border border-slate-300 rounded hover:bg-slate-50"
+                className="btn btn-ghost btn-sm"
                 aria-label="Reload page"
               >
                 Reload page

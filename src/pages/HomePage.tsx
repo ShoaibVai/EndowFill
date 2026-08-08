@@ -25,6 +25,11 @@ import {
   Mail,
   Check,
   X,
+  ScanText,
+  Zap,
+  Files,
+  Sparkles,
+  PenTool,
 } from 'lucide-react';
 import { JoinRequestModal } from '../components/workspace/JoinRequestModal';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -56,6 +61,7 @@ interface HomePageProps {
 export function HomePage({ user }: HomePageProps) {
   const navigate = useNavigate();
   const addNotification = useAppStore((s) => s.addNotification);
+  const setActiveTab = useAppStore((s) => s.setActiveTab);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState<WorkspaceWithMeta[]>([]);
@@ -226,8 +232,66 @@ export function HomePage({ user }: HomePageProps) {
             Welcome back, <span className="home-greeting__name">{displayName}</span> 👋
           </h1>
           <p className="home-greeting__sub">
-            Choose a workspace to start editing and generating PDFs collaboratively.
+            Choose a workspace to start editing and generating PDFs collaboratively — or jump
+            straight into the AI workflow.
           </p>
+        </section>
+
+        {/* Quick actions — direct entry to the Scan → Map → Generate flow */}
+        <section className="ws-section">
+          <div className="ws-section__head">
+            <div className="ws-section__title-row">
+              <Sparkles size={18} style={{ color: 'var(--color-primary-500)' }} />
+              <h2 className="ws-section__title">Quick start</h2>
+            </div>
+          </div>
+          <div className="home-quick-actions">
+            {(
+              [
+                {
+                  tab: 'editor' as const,
+                  icon: <PenTool size={18} />,
+                  label: 'Template Editor',
+                  desc: 'Design & map template fields',
+                },
+                {
+                  tab: 'scan' as const,
+                  icon: <ScanText size={18} />,
+                  label: 'AI Scan',
+                  desc: 'Extract data from one document',
+                },
+                {
+                  tab: 'bulk-scan' as const,
+                  icon: <Files size={18} />,
+                  label: 'Bulk Scan',
+                  desc: 'OCR many documents at once',
+                },
+                {
+                  tab: 'generate' as const,
+                  icon: <Zap size={18} />,
+                  label: 'Bulk Generate',
+                  desc: 'Fill PDFs from Excel or scans',
+                },
+              ]
+            ).map((action) => (
+              <button
+                key={action.tab}
+                id={`home-quick-${action.tab}`}
+                className="home-quick-action"
+                onClick={() => {
+                  setActiveTab(action.tab);
+                  navigate('/app');
+                }}
+              >
+                <span className="home-quick-action__icon">{action.icon}</span>
+                <span className="min-w-0">
+                  <span className="home-quick-action__label">{action.label}</span>
+                  <span className="home-quick-action__desc">{action.desc}</span>
+                </span>
+                <ChevronRight size={16} className="home-quick-action__arrow" />
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* Pending invites */}
@@ -342,7 +406,7 @@ export function HomePage({ user }: HomePageProps) {
             </div>
           ) : workspaces.length === 0 ? (
             <div className="ws-empty">
-              <Building2 size={40} style={{ color: 'var(--color-surface-300)' }} />
+              <Building2 size={40} style={{ color: 'var(--text-faint)' }} />
               <p>You don't have any workspaces yet.</p>
               <button id="home-empty-create-btn" className="btn-primary" onClick={() => setShowCreateForm(true)}>
                 <Plus size={15} /> Create your first workspace

@@ -19,7 +19,7 @@ function initials(m: WorkspaceMember): string {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  owner:  '#ef4444',
+  owner:  'var(--color-primary-500)',
   editor: '#10b981',
   viewer: '#94a3b8',
 };

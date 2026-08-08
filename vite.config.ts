@@ -14,6 +14,16 @@ export default defineConfig(({
       '@': '/src',
     },
   },
+  server: {
+    proxy: {
+      // Dev: forward API calls to the local Fastify AI server (server/).
+      // In production nginx proxies /api/ to the same backend.
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8787',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {

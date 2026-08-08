@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import type {
   ActiveTab,
+  DataSourceMode,
   IConditionalRule,
   IExcelColumn,
   IFieldBinding,
@@ -17,6 +18,7 @@ import type {
   ISchemaField,
   IValidationRule,
 } from '../types/pdfme.types';
+import type { BulkScanResult, ExtractedItem } from '../types/scan.types';
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -74,7 +76,18 @@ interface AppState {
   fieldBindings: IFieldBinding[];
   setFieldBindings: (bindings: IFieldBinding[]) => void;
   addFieldBinding: (binding: IFieldBinding) => void;
-  removeFieldBinding: (schemaFieldId: string) => void;
+  removeFieldBinding: (schemaFieldId: string, sourceItemId?: string) => void;
+
+  // -- AI Scan Data --
+  /** Which data source feeds bulk generation (Excel columns or AI-extracted items). */
+  dataSourceMode: DataSourceMode;
+  setDataSourceMode: (mode: DataSourceMode) => void;
+  /** Reviewed items from a single AI document scan (single-record source). */
+  extractedItems: ExtractedItem[];
+  setExtractedItems: (items: ExtractedItem[]) => void;
+  /** Per-file results from a bulk AI scan (one record per file). */
+  bulkExtractedResults: BulkScanResult[];
+  setBulkExtractedResults: (results: BulkScanResult[]) => void;
 
   // -- Validation Rules --
   validationRules: IValidationRule[];
@@ -166,14 +179,32 @@ export const useAppStore = create<AppState>((set) => ({
   addFieldBinding: (binding) =>
     set((s) => ({
       fieldBindings: [
-        ...s.fieldBindings.filter((b) => b.schemaFieldId !== binding.schemaFieldId),
+        // Replace only same-source bindings for this field so Excel-mode
+        // and AI-mode mappings coexist without clobbering each other.
+        ...s.fieldBindings.filter((b) => {
+          if (b.schemaFieldId !== binding.schemaFieldId) return true;
+          return Boolean(b.sourceItemId) !== Boolean(binding.sourceItemId);
+        }),
         binding,
       ],
     })),
-  removeFieldBinding: (schemaFieldId) =>
+  removeFieldBinding: (schemaFieldId, sourceItemId) =>
     set((s) => ({
-      fieldBindings: s.fieldBindings.filter((b) => b.schemaFieldId !== schemaFieldId),
+      fieldBindings: s.fieldBindings.filter((b) => {
+        if (b.schemaFieldId !== schemaFieldId) return true;
+        if (sourceItemId !== undefined) return b.sourceItemId !== sourceItemId;
+        // No sourceItemId passed → remove only the Excel-mode binding.
+        return Boolean(b.sourceItemId);
+      }),
     })),
+
+  // -- AI Scan Data --
+  dataSourceMode: 'excel',
+  setDataSourceMode: (mode) => set({ dataSourceMode: mode }),
+  extractedItems: [],
+  setExtractedItems: (items) => set({ extractedItems: items }),
+  bulkExtractedResults: [],
+  setBulkExtractedResults: (results) => set({ bulkExtractedResults: results }),
 
   // -- Validation Rules --
   // Per-field validation rules editable in the UI and read by the worker

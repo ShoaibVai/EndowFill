@@ -2,24 +2,42 @@
  * pages/WelcomePage.tsx — Public landing page.
  *
  * Shown at "/" for unauthenticated visitors.
- * Includes hero section, feature highlights, and CTAs to /auth.
+ * Hero + Scan → Map → Generate workflow + feature highlights + CTAs to /auth.
  */
 
 import { useNavigate } from 'react-router-dom';
-import { FileText, Zap, Shield, ArrowRight, Layers } from 'lucide-react';
+import { FileText, Zap, Shield, ArrowRight, Layers, ScanText, Sparkles, PenTool } from 'lucide-react';
+
+const workflow = [
+  {
+    icon: ScanText,
+    title: 'Scan',
+    description: 'Upload a document and AI extracts every field — or connect an Excel file.',
+  },
+  {
+    icon: PenTool,
+    title: 'Map',
+    description: 'Design your template and map fields in a drag-and-drop visual editor.',
+  },
+  {
+    icon: Zap,
+    title: 'Generate',
+    description: 'Produce hundreds of personalised PDFs in seconds — one per record.',
+  },
+];
 
 const features = [
+  {
+    icon: Sparkles,
+    title: 'AI Document Scan',
+    description:
+      'OCR + extraction review: see exactly what was read, correct it, and send it straight to generation.',
+  },
   {
     icon: FileText,
     title: 'Smart PDF Editing',
     description:
       'Detect and map fillable fields automatically — no manual configuration needed.',
-  },
-  {
-    icon: Zap,
-    title: 'Bulk Generation',
-    description:
-      'Generate hundreds of personalised PDFs from a spreadsheet in seconds.',
   },
   {
     icon: Layers,
@@ -66,7 +84,10 @@ export function WelcomePage() {
 
       {/* ── Hero ── */}
       <section className="hero">
-
+        <span className="hero__badge">
+          <Sparkles size={14} />
+          Scan · Map · Generate — the AI document workflow
+        </span>
 
         <h1 className="hero__title">
           Fill, Generate &amp; Deliver<br />
@@ -95,9 +116,25 @@ export function WelcomePage() {
           </button>
         </div>
 
-        {/* Decorative gradient orb */}
+        {/* Decorative gradient orbs */}
         <div className="hero__orb hero__orb--1" aria-hidden="true" />
         <div className="hero__orb hero__orb--2" aria-hidden="true" />
+      </section>
+
+      {/* ── Workflow strip ── */}
+      <section className="workflow-strip" aria-label="How it works">
+        {workflow.map(({ icon: Icon, title, description }, index) => (
+          <div key={title} className="workflow-step">
+            <span className="workflow-step__num">{index + 1}</span>
+            <div>
+              <h3 className="workflow-step__title">
+                <Icon size={14} className="inline mr-1" style={{ color: 'var(--color-primary-500)' }} />
+                {title}
+              </h3>
+              <p className="workflow-step__desc">{description}</p>
+            </div>
+          </div>
+        ))}
       </section>
 
       {/* ── Features ── */}

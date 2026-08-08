@@ -26,16 +26,16 @@ export function ExcelPreview() {
   const previewRows = excelRows.slice(0, 5);
 
   return (
-    <div className="card animate-fade-in flex flex-col" style={{ border: '1px solid var(--color-surface-200)', overflow: 'hidden' }}>
+    <div className="card animate-fade-in flex flex-col" style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
       {/* Header */}
-      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-surface-200)', background: 'var(--color-surface-50)' }}>
+      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-inset)' }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}>
             <FileSpreadsheet className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold" style={{ color: 'var(--color-surface-800)' }}>{excelFileName}</h3>
-            <p className="text-xs" style={{ color: 'var(--color-surface-500)' }}>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{excelFileName}</h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {excelColumns.length} columns • {excelRows.length} rows detected
             </p>
           </div>
@@ -50,13 +50,13 @@ export function ExcelPreview() {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr style={{ background: 'var(--color-surface-100)', borderBottom: '1px solid var(--color-surface-200)' }}>
-              <th className="px-4 py-3 font-semibold text-xs" style={{ color: 'var(--color-surface-600)', width: '50px' }}>#</th>
+            <tr style={{ background: 'var(--bg-inset)', borderBottom: '1px solid var(--border-subtle)' }}>
+              <th className="px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-muted)', width: '50px' }}>#</th>
               {excelColumns.map((col) => (
-                <th key={col.index} className="px-4 py-3 font-semibold text-xs whitespace-nowrap" style={{ color: 'var(--color-surface-700)' }}>
+                <th key={col.index} className="px-4 py-3 font-semibold text-xs whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
                   <div className="flex flex-col">
                     <span>{col.header}</span>
-                    <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-surface-400)' }}>{col.inferredType}</span>
+                    <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{col.inferredType}</span>
                   </div>
                 </th>
               ))}
@@ -65,9 +65,9 @@ export function ExcelPreview() {
           <tbody>
             {previewRows.map((row, idx) => (
               <tr key={idx} style={{ borderBottom: '1px solid var(--color-surface-100)' }} className="hover:bg-slate-50 transition-colors">
-                <td className="px-4 py-2 text-xs font-medium" style={{ color: 'var(--color-surface-400)' }}>{idx + 1}</td>
+                <td className="px-4 py-2 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
                 {excelColumns.map((col) => (
-                  <td key={col.index} className="px-4 py-2 text-sm truncate max-w-[200px]" style={{ color: 'var(--color-surface-700)' }}>
+                  <td key={col.index} className="px-4 py-2 text-sm truncate max-w-[200px]" style={{ color: 'var(--text-main)' }}>
                     {row[col.header] || <span className="opacity-40 italic">empty</span>}
                   </td>
                 ))}
@@ -77,7 +77,7 @@ export function ExcelPreview() {
         </table>
       </div>
       {excelRows.length > 5 && (
-        <div className="px-4 py-2 text-center text-xs" style={{ background: 'var(--color-surface-50)', color: 'var(--color-surface-500)', borderTop: '1px solid var(--color-surface-200)' }}>
+        <div className="px-4 py-2 text-center text-xs" style={{ background: 'var(--bg-inset)', color: 'var(--text-muted)', borderTop: '1px solid var(--color-surface-200)' }}>
           Showing 5 of {excelRows.length} rows
         </div>
       )}

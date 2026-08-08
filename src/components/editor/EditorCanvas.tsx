@@ -210,18 +210,18 @@ export function EditorCanvas() {
         </div>
         <h3
           className="text-lg font-semibold mb-2"
-          style={{ color: 'var(--color-surface-800)' }}
+          style={{ color: 'var(--text-main)' }}
         >
           {isDragOver ? 'Drop your PDF here!' : 'Upload a PDF Template'}
         </h3>
         <p
           className="text-sm max-w-md mb-6"
-          style={{ color: 'var(--color-surface-400)', lineHeight: 1.6 }}
+          style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}
         >
           Drag & drop a fillable PDF or use the upload button above.
           The Designer will open where you can add and position text fields.
         </p>
-        <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--color-surface-400)' }}>
+        <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
           <span className="flex items-center gap-1">
             <FileText className="w-3 h-3" /> .pdf files only
           </span>

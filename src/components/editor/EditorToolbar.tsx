@@ -53,7 +53,7 @@ export function EditorToolbar() {
       className="flex items-center justify-between px-4 py-2.5 rounded-xl mb-3"
       style={{
         background: 'var(--color-surface-0)',
-        border: '1px solid var(--color-surface-200)',
+        border: '1px solid var(--border-subtle)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}
     >
@@ -93,7 +93,7 @@ export function EditorToolbar() {
         <div className="hidden md:flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5" style={{ color: 'var(--color-primary-500)' }} />
-            <span className="text-xs font-medium" style={{ color: 'var(--color-surface-500)' }}>
+            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
               {schemaFields.length} field{schemaFields.length !== 1 ? 's' : ''} defined
             </span>
           </div>

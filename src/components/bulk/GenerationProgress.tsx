@@ -54,20 +54,20 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
   };
 
   return (
-    <div className="card p-6 animate-fade-in" style={{ border: '1px solid var(--color-surface-200)' }} aria-live="polite" aria-atomic="false">
+    <div className="card p-6 animate-fade-in" style={{ border: '1px solid var(--border-subtle)' }} aria-live="polite" aria-atomic="false">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--color-surface-800)' }}>
+          <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
             {status === 'running' && <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary-500)' }} />}
             {status === 'done' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
             {status === 'cancelled' && <XCircle className="w-5 h-5 text-red-500" />}
             {status === 'running' ? 'Generating PDFs...' : status === 'done' ? 'Generation Complete' : 'Generation Cancelled'}
           </h3>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-surface-500)' }}>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             {completedRows} of {totalRows} processed ({(elapsed / 1000).toFixed(1)}s)
           </p>
           {(status === 'running' || status === 'paused') && (
-            <p className="text-xs mt-1" style={{ color: 'var(--color-surface-400)' }}>{etaLabel}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{etaLabel}</p>
           )}
         </div>
         
@@ -95,7 +95,7 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full h-3 rounded-full mb-4 overflow-hidden" style={{ background: 'var(--color-surface-100)' }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent} aria-label="PDF generation progress">
+      <div className="w-full h-3 rounded-full mb-4 overflow-hidden" style={{ background: 'var(--bg-inset)' }} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent} aria-label="PDF generation progress">
         <div 
           className="h-full transition-all duration-300"
           style={{ 
@@ -107,7 +107,7 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
 
       {/* Status Details */}
       <div className="flex gap-4 text-sm mb-4">
-        <div className="flex items-center gap-1.5" style={{ color: 'var(--color-surface-600)' }}>
+        <div className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
           <CheckCircle2 className="w-4 h-4 text-green-500" />
           {rows.filter(r => r.status === 'done').length} Succeeded
         </div>
@@ -144,15 +144,15 @@ export function GenerationProgress({ onCancel, onPause, onResume, onDownloadSing
 
       {/* Row-level downloads */}
       {rows.some((r) => r.status === 'done') && (
-        <div className="mt-4 p-3 rounded-lg text-sm max-h-44 overflow-y-auto" style={{ background: 'var(--color-surface-50)', border: '1px solid var(--color-surface-200)' }}>
-          <h4 className="font-semibold mb-2" style={{ color: 'var(--color-surface-700)' }}>Download Individual PDFs</h4>
+        <div className="mt-4 p-3 rounded-lg text-sm max-h-44 overflow-y-auto" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
+          <h4 className="font-semibold mb-2" style={{ color: 'var(--text-main)' }}>Download Individual PDFs</h4>
           <div className="flex flex-col gap-2">
             {rows
               .filter((r) => r.status === 'done' && r.filename)
               .slice(0, 30)
               .map((r) => (
                 <div key={`${r.rowIndex}-${r.filename}`} className="flex items-center justify-between text-xs">
-                  <span style={{ color: 'var(--color-surface-600)' }}>Row {r.rowIndex + 1}: {r.filename}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Row {r.rowIndex + 1}: {r.filename}</span>
                   <button className="btn btn-ghost btn-sm" onClick={() => onDownloadSingle(r.filename)} aria-label={`Download ${r.filename}`}>
                     <Download className="w-4 h-4" /> Download
                   </button>

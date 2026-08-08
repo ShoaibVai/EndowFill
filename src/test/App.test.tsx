@@ -9,9 +9,11 @@ beforeEach(() => {
   useAppStore.setState({ activeTab: 'editor', notifications: [] });
 });
 
-test('renders app shell and shows loading fallback', async () => {
+test('renders the app shell and lands unauthenticated users on the marketing page', async () => {
   await act(async () => {
     render(<App />);
   });
-  expect(screen.getByText(/Loading page.../i)).toBeInTheDocument();
+  // No session in the test environment → the landing experience must render.
+  expect(screen.getByRole('button', { name: /get started free/i })).toBeInTheDocument();
+  expect(screen.getByText(/Scan · Map · Generate/i)).toBeInTheDocument();
 });

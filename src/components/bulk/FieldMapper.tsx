@@ -95,11 +95,11 @@ export function FieldMapper() {
   };
 
   return (
-    <div className="card flex flex-col p-6 animate-fade-in" style={{ border: '1px solid var(--color-surface-200)' }}>
+    <div className="card flex flex-col p-6 animate-fade-in" style={{ border: '1px solid var(--border-subtle)' }}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold" style={{ color: 'var(--color-surface-800)' }}>Map Fields to Columns</h3>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-surface-500)' }}>
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Map Fields to Columns</h3>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             Connect each PDF field to the corresponding Excel column.
           </p>
         </div>
@@ -134,7 +134,7 @@ export function FieldMapper() {
 
       <div className="flex flex-col gap-3">
         {/* Header Row */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-2 font-semibold text-xs uppercase tracking-wider" style={{ color: 'var(--color-surface-400)', borderBottom: '1px solid var(--color-surface-200)' }}>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-2 font-semibold text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-subtle)' }}>
           <div>PDF Template Field</div>
           <div className="w-8"></div>
           <div>Excel Data Column</div>
@@ -149,8 +149,8 @@ export function FieldMapper() {
             <div key={field.name} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 p-3 rounded-xl transition-colors" style={{ background: isMapped ? 'var(--color-surface-50)' : 'rgba(254, 243, 199, 0.4)' }}>
               {/* PDF Field Left */}
               <div className="flex flex-col">
-                <span className="text-sm font-medium" style={{ color: 'var(--color-surface-800)' }}>{field.name}</span>
-                <span className="text-xs" style={{ color: 'var(--color-surface-400)' }}>{field.type}{field.required ? ' • Required' : ''}</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{field.name}</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{field.type}{field.required ? ' • Required' : ''}</span>
                 {isImageField(field) && (
                   <span className="text-xs flex items-center gap-1 mt-0.5" style={{ color: 'var(--color-primary-500)' }}>
                     <Image className="w-3 h-3" /> Accepts Google Drive URLs
@@ -181,7 +181,7 @@ export function FieldMapper() {
                   className="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                   style={{
                     borderColor: isMapped ? 'var(--color-surface-300)' : 'var(--color-warning)',
-                    color: 'var(--color-surface-700)'
+                    color: 'var(--text-main)'
                   }}
                 >
                   <option value="">-- Unmapped --</option>
