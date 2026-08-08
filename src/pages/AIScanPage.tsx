@@ -38,6 +38,7 @@ import {
 } from '../utils/pdfViewer';
 import { base64ToArrayBuffer } from '../utils/bufferUtils';
 import { rasterizeFileToPages } from '../utils/pdfRaster';
+import { runOcr } from '../utils/aiChunk';
 import { DetectionOverlay } from '../components/scan/DetectionOverlay';
 import { ExtractedItemList } from '../components/scan/ExtractedItemList';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -203,9 +204,9 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
       if (cancelledRef.current) return;
 
       setScanProgress(`Scanning pages with OCR (${targetDpi} DPI)…`);
-      const ocr = await api.post<OcrResult>('/ai/ocr', {
-        pages,
+      const ocr = await runOcr(pages, {
         dpi: targetDpi,
+        onChunkProgress: (label) => setScanProgress(label),
       });
       if (cancelledRef.current) return;
       setOcrResult(ocr);

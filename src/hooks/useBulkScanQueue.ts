@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../utils/apiClient';
 import { rasterizeFileToPages, type RasterPage } from '../utils/pdfRaster';
+import { runOcr } from '../utils/aiChunk';
 import type { ExtractResult, ExtractedItem, OcrResult } from '../types/scan.types';
 
 // ---------------------------------------------------------------------------
@@ -145,10 +146,10 @@ export function useBulkScanQueue() {
 
       let ocr: OcrResult;
       try {
-        ocr = await api.post<OcrResult>('/ai/ocr', {
-          pages,
-          filename: item.file.name,
+        ocr = await runOcr(pages, {
           dpi: dpiRef.current,
+          filename: item.file.name,
+          onChunkProgress: (label) => setProgressLabel(label),
         });
       } catch (error) {
         updateItem(item.id, { status: 'failed', error: describeError(error, 'OCR failed for this file.') });

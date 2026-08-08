@@ -31,7 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { api } from '../utils/apiClient';
+import { runDetectFields } from '../utils/aiChunk';
 import {
   bboxToOverlayStyle,
   clamp01,
@@ -52,7 +52,6 @@ import {
 import { TemplateService } from '../services/template.service';
 import { useAppStore } from '../store/useAppStore';
 import type {
-  DetectFieldsResult,
   DetectedField,
   DetectedFieldType,
   FieldPatch,
@@ -192,10 +191,11 @@ export function AIFieldsPage() {
       if (cancelledRef.current) return;
 
       setDetectProgress(`Detecting form fields (${targetDpi} DPI)…`);
-      const result = await api.post<DetectFieldsResult>('/ai/detect-fields', {
+      const result = await runDetectFields(
         pages,
-        dpi: targetDpi,
-      });
+        targetDpi,
+        (label) => setDetectProgress(label)
+      );
       if (cancelledRef.current) return;
 
       const pdf = await loadPdfFromBytes(base64ToArrayBuffer(base64));
