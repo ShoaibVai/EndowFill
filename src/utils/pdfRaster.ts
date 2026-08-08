@@ -93,11 +93,16 @@ async function renderPageToJpeg(
 /**
  * Convert an uploaded file into raster pages for the AI server.
  * `onProgress` receives a human-readable label per page (scan UIs show it).
+ *
+ * `preloadedBytes` lets callers that already read the file as an ArrayBuffer
+ * (e.g. to feed pdf.js for the review UI) avoid a second full read — the
+ * dominant memory cost for large PDFs. When omitted the file is read here.
  */
 export async function rasterizeFileToPages(
   file: File,
   dpi: number,
-  onProgress?: (label: string) => void
+  onProgress?: (label: string) => void,
+  preloadedBytes?: ArrayBuffer
 ): Promise<RasterPage[]> {
   // Images pass through untouched — re-encoding would only lose quality.
   if (file.type.startsWith('image/')) {
@@ -107,7 +112,7 @@ export async function rasterizeFileToPages(
   }
 
   onProgress?.(`Rasterizing ${file.name} (${dpi} DPI)…`);
-  const bytes = await readFileAsArrayBuffer(file);
+  const bytes = preloadedBytes ?? (await readFileAsArrayBuffer(file));
   const pdf = await loadPdfFromBytes(bytes);
   try {
     const pages: RasterPage[] = [];

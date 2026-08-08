@@ -39,7 +39,6 @@ import {
   loadPdfFromBytes,
   renderPageToCanvas,
 } from '../utils/pdfViewer';
-import { base64ToArrayBuffer } from '../utils/bufferUtils';
 import { rasterizeFileToPages } from '../utils/pdfRaster';
 import { FieldOverlay } from '../components/scan/FieldOverlay';
 import { FIELD_TYPE_STYLES } from '../components/scan/fieldTypeStyles';
@@ -74,19 +73,12 @@ const FIELD_TYPE_OPTIONS: { value: DetectedFieldType; label: string }[] = [
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
 
-function readFileAsBase64(file: File): Promise<string> {
+function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string' && result.includes(',')) {
-        resolve(result.split(',')[1] ?? '');
-      } else {
-        reject(new Error('Could not read the file.'));
-      }
-    };
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
     reader.onerror = () => reject(new Error('Could not read the file.'));
-    reader.readAsDataURL(file);
+    reader.readAsArrayBuffer(file);
   });
 }
 
@@ -143,7 +135,6 @@ export function AIFieldsPage() {
   // ── Upload / detect state ──
   const [phase, setPhase] = useState<Phase>('upload');
   const [file, setFile] = useState<File | null>(null);
-  const [fileBase64, setFileBase64] = useState<string | null>(null);
   const [dpi, setDpi] = useState(300);
   const [fields, setFields] = useState<ReviewField[]>([]);
   const [detectError, setDetectError] = useState<string | null>(null);
@@ -169,6 +160,13 @@ export function AIFieldsPage() {
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cancelledRef = useRef(false);
+  // Raw bytes of the uploaded PDF — read once, shared by rasterization, the
+  // review viewer, and the basePdf handoff to the editor.
+  const pdfBytesRef = useRef<ArrayBuffer | null>(null);
+  // Per-run identity + abort control: a new run increments the run id and
+  // aborts the previous one, so concurrent runs can never race for state.
+  const detectRunIdRef = useRef(0);
+  const detectAbortRef = useRef<AbortController | null>(null);
 
   const totalPages = Math.max(pageRatios.length, pageSizesPt.length);
   const pageRatio = pageRatios[currentPage] ?? null;
@@ -176,30 +174,41 @@ export function AIFieldsPage() {
   // ── Detect pipeline ────────────────────────────────────────────────────────
 
   const runDetect = useCallback(async (target: File, targetDpi: number) => {
+    // Invalidate any in-flight run and start a new generation.
+    const runId = ++detectRunIdRef.current;
+    detectAbortRef.current?.abort();
+    const abortController = new AbortController();
+    detectAbortRef.current = abortController;
     cancelledRef.current = false;
     setDetectError(null);
     setPhase('detecting');
     setDetectProgress('Reading file…');
 
+    const isCurrentRun = (): boolean =>
+      detectRunIdRef.current === runId && !abortController.signal.aborted;
+
     try {
-      const base64 = await readFileAsBase64(target);
-      if (cancelledRef.current) return;
-      setFileBase64(base64);
+      // PDFs only — read the file once as an ArrayBuffer and reuse it for
+      // rasterization AND the review viewer (avoids a ~2x memory blow-up).
+      const bytes = await readFileAsArrayBuffer(target);
+      if (!isCurrentRun()) return;
+      pdfBytesRef.current = bytes;
 
       setDetectProgress(`Rasterizing pages (${targetDpi} DPI)…`);
-      const pages = await rasterizeFileToPages(target, targetDpi, setDetectProgress);
-      if (cancelledRef.current) return;
+      const pages = await rasterizeFileToPages(target, targetDpi, setDetectProgress, bytes);
+      if (!isCurrentRun()) return;
 
       setDetectProgress(`Detecting form fields (${targetDpi} DPI)…`);
       const result = await runDetectFields(
         pages,
         targetDpi,
-        (label) => setDetectProgress(label)
+        (label) => setDetectProgress(label),
+        abortController.signal
       );
-      if (cancelledRef.current) return;
+      if (!isCurrentRun()) return;
 
-      const pdf = await loadPdfFromBytes(base64ToArrayBuffer(base64));
-      if (cancelledRef.current) {
+      const pdf = await loadPdfFromBytes(bytes);
+      if (!isCurrentRun()) {
         disposePdf(pdf);
         return;
       }
@@ -215,6 +224,7 @@ export function AIFieldsPage() {
         sizes.push({ width: viewport.width, height: viewport.height });
         page.cleanup();
       }
+      if (!isCurrentRun()) return;
       setPageRatios(ratios);
       setPageSizesPt(sizes);
       setFields(normalizeFields(result.fields ?? [], sizes.length));
@@ -224,7 +234,7 @@ export function AIFieldsPage() {
       setEditMode(false);
       setPhase('review');
     } catch (error) {
-      if (cancelledRef.current) return;
+      if (!isCurrentRun()) return;
       setDetectError(error instanceof Error ? error.message : 'Detection failed. Please try again.');
       setPhase('upload');
     }
@@ -268,13 +278,15 @@ export function AIFieldsPage() {
 
   const handleNewScan = useCallback(() => {
     cancelledRef.current = true;
+    detectAbortRef.current?.abort();
+    detectRunIdRef.current += 1;
     if (pdfRef.current) {
       disposePdf(pdfRef.current);
       pdfRef.current = null;
     }
     setPhase('upload');
     setFile(null);
-    setFileBase64(null);
+    pdfBytesRef.current = null;
     setFields([]);
     setCurrentPage(0);
     setPageRatios([]);
@@ -291,6 +303,8 @@ export function AIFieldsPage() {
   useEffect(
     () => () => {
       cancelledRef.current = true;
+      detectRunIdRef.current += 1;
+      detectAbortRef.current?.abort();
       if (pdfRef.current) disposePdf(pdfRef.current);
     },
     []
@@ -379,7 +393,7 @@ export function AIFieldsPage() {
     if (!drawPending) return;
     const label = drawLabel.trim() || 'Untitled field';
     const field: ReviewField = {
-      id: `field-manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: `field-manual-${crypto.randomUUID()}`,
       label,
       fieldType: drawType,
       pageIndex: currentPage,
@@ -407,9 +421,9 @@ export function AIFieldsPage() {
   // ── Export / handoff to the pdfme Designer ─────────────────────────────────
 
   const buildTemplate = useCallback(() => {
-    if (!fileBase64) return null;
+    if (!pdfBytesRef.current) return null;
     return buildTemplateFromFields(fields, pageSizesPt);
-  }, [fields, fileBase64, pageSizesPt]);
+  }, [fields, pageSizesPt]);
 
   /** Populate the editor store with the built template (shared by save paths). */
   const openInEditor = useCallback(
@@ -437,10 +451,10 @@ export function AIFieldsPage() {
   );
 
   const handleGenerate = useCallback(async () => {
-    if (!file || !fileBase64) return;
+    if (!file || !pdfBytesRef.current) return;
     const build = buildTemplate();
     if (!build) return;
-    const basePdf = base64ToArrayBuffer(fileBase64);
+    const basePdf = pdfBytesRef.current;
     const name = file.name.replace(/\.pdf$/i, '') || 'Form Template';
 
     if (activeWorkspaceId) {
@@ -488,7 +502,6 @@ export function AIFieldsPage() {
     addNotification,
     buildTemplate,
     file,
-    fileBase64,
     openInEditor,
     setCurrentProjectId,
     setHasUnsavedChanges,

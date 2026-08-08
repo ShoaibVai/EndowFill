@@ -65,8 +65,14 @@ function normalizeFields(raw: unknown, pageIndex: number): FieldReply[] {
   return fields;
 }
 
-export function registerDetectFieldsRoute(app: FastifyInstance): void {
-  app.post('/api/ai/detect-fields', async (request, reply) => {
+export function registerDetectFieldsRoute(
+  app: FastifyInstance,
+  rateLimit?: { max: number; timeWindow: number }
+): void {
+  app.post(
+    '/api/ai/detect-fields',
+    { config: rateLimit ? { rateLimit } : undefined },
+    async (request, reply) => {
     const pages = parsePagesBody(request.body);
     const allFields: FieldReply[] = [];
 

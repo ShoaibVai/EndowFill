@@ -17,6 +17,8 @@
 import Fastify from 'fastify';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import { jwtVerify } from 'jose';
 import { BODY_LIMIT_BYTES, config } from './config.js';
 import { HttpError } from './validate.js';
 import { registerOcrRoute } from './routes/ocr.js';
@@ -28,10 +30,72 @@ const app = Fastify({
   bodyLimit: BODY_LIMIT_BYTES,
   // Vision calls can run for minutes on long documents.
   requestTimeout: 300_000,
+  // The app sits behind nginx (/api/ -> Fastify) — trust X-Forwarded-For so
+  // rate limiting and logs see the real client IP instead of the proxy's.
+  trustProxy: true,
+  genReqId: () => crypto.randomUUID(),
 });
 
+const corsOrigins =
+  config.corsOrigin === '*'
+    ? []
+    : config.corsOrigin
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+if (corsOrigins.length === 0) {
+  app.log.warn('CORS_ORIGIN is "*" or empty — cross-origin requests will be blocked. Set CORS_ORIGIN to your app origin(s) in production.');
+}
+
 await app.register(cors, {
-  origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(',').map((o) => o.trim()),
+  origin: corsOrigins.length > 0 ? corsOrigins : false,
+});
+
+// ── Rate limit /api/ai/* — these endpoints burn paid model quota ────────────
+await app.register(rateLimit, {
+  global: false,
+  max: config.rateLimitMax,
+  timeWindow: config.rateLimitWindowMs,
+  errorResponseBuilder: (_request, context) => ({
+    statusCode: 429,
+    error: 'Too Many Requests',
+    message: `Rate limit exceeded — try again in ${Math.ceil(Number(context.after) / 1000)}s.`,
+    code: 'rate_limited',
+  }),
+});
+
+const AI_ROUTE_PREFIX = '/api/ai/';
+
+// ── Auth gate for /api/ai/* ─────────────────────────────────────────────────
+// The SPA sends `Authorization: Bearer <supabase access token>` on every
+// apiFetch (see src/utils/apiClient.ts). When SUPABASE_JWT_SECRET is set we
+// require and verify that token; when unset (dev) the endpoints stay open but
+// the boot warning makes the risk explicit.
+const authSecret = new TextEncoder().encode(config.supabaseJwtSecret);
+
+if (!config.supabaseJwtSecret) {
+  app.log.warn(
+    'SUPABASE_JWT_SECRET is not set — /api/ai/* will not require authentication. ' +
+      'These endpoints run paid model calls; set SUPABASE_JWT_SECRET in production.'
+  );
+}
+
+app.addHook('onRequest', async (request) => {
+  if (!request.url.startsWith(AI_ROUTE_PREFIX)) return;
+  if (!config.supabaseJwtSecret) return;
+
+  const header = request.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
+  if (!token) {
+    throw new HttpError('Missing authentication token.', 401, 'unauthorized');
+  }
+
+  try {
+    await jwtVerify(token, authSecret, { algorithms: ['HS256'] });
+  } catch {
+    throw new HttpError('Invalid or expired authentication token.', 401, 'unauthorized');
+  }
 });
 
 // ── Error serialization: always { message, code } ────────────────────────────
@@ -49,6 +113,14 @@ app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: Fastif
     });
   }
 
+  // Fastify rate-limit violation → mirror the frontend's rate_limited code.
+  if (error.code === 'FST_ERR_RATE_LIMIT' || error.statusCode === 429) {
+    return reply.status(429).send({
+      message: 'Rate limit exceeded. Please try again shortly.',
+      code: 'rate_limited',
+    });
+  }
+
   request.log.error(error);
   const statusCode =
     typeof error.statusCode === 'number' && error.statusCode >= 400 ? error.statusCode : 500;
@@ -62,9 +134,11 @@ app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: Fastif
 
 app.get('/api/health', async () => ({ ok: true, model: config.openCodeGoModel }));
 
-registerOcrRoute(app);
-registerExtractRoute(app);
-registerDetectFieldsRoute(app);
+// Apply the AI rate limiter to the three model routes.
+const AI_RATE_LIMIT_CONFIG = { max: config.rateLimitMax, timeWindow: config.rateLimitWindowMs };
+registerOcrRoute(app, AI_RATE_LIMIT_CONFIG);
+registerExtractRoute(app, AI_RATE_LIMIT_CONFIG);
+registerDetectFieldsRoute(app, AI_RATE_LIMIT_CONFIG);
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 

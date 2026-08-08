@@ -56,8 +56,14 @@ function normalizeDetections(raw: unknown, pageIndex: number): OcrDetectionReply
   return detections;
 }
 
-export function registerOcrRoute(app: FastifyInstance): void {
-  app.post('/api/ai/ocr', async (request, reply) => {
+export function registerOcrRoute(
+  app: FastifyInstance,
+  rateLimit?: { max: number; timeWindow: number }
+): void {
+  app.post(
+    '/api/ai/ocr',
+    { config: rateLimit ? { rateLimit } : undefined },
+    async (request, reply) => {
     const pages = parsePagesBody(request.body);
     const results: OcrPageReply[] = [];
 

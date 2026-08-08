@@ -63,6 +63,40 @@ function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
+/** Retry-after in ms from a 429/503 response header, or null. */
+function retryAfterMs(payload: ChatCompletionResponse, response: Response | null): number | null {
+  const headerValue = response?.headers.get('retry-after');
+  if (headerValue) {
+    const seconds = Number(headerValue);
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  }
+  return null;
+}
+
+/** Exponential backoff with jitter: base * 2^attempt ± 20%. */
+function backoffMs(attempt: number, retryAfter: number | null): number {
+  if (retryAfter !== null) return Math.min(retryAfter, 60_000);
+  const base = 500 * 2 ** attempt;
+  const jitter = base * 0.2 * (Math.random() - 0.5);
+  return Math.max(0, Math.round(base + jitter));
+}
+
+/** Sleep helper (also abortable so shutdown can cut retries short). */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      resolve();
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 async function postChatCompletion(body: unknown): Promise<string> {
   const url = `${config.openCodeGoBaseUrl}/chat/completions`;
   let response: Response;
@@ -92,10 +126,12 @@ async function postChatCompletion(body: unknown): Promise<string> {
   if (!response.ok) {
     const upstreamMessage =
       payload.error?.message ?? text.slice(0, 300) ?? `HTTP ${response.status}`;
-    throw new UpstreamError(
+    const err = new UpstreamError(
       `OCR model request failed (${response.status}): ${upstreamMessage}`,
       response.status
     );
+    (err as UpstreamError & { retryAfter?: number | null }).retryAfter = retryAfterMs(payload, response);
+    throw err;
   }
 
   const content = readAssistantText(payload);
@@ -136,25 +172,41 @@ function buildBody(request: ChatRequest, withJsonMode: boolean): Record<string, 
  *
  * - First attempt uses OpenAI JSON mode; a 400 (unsupported on some
  *   OpenCode Go routes) retries once without it.
- * - One extra retry on transient statuses (429/5xx) or network failures.
+ * - Transient statuses (429/5xx) or network failures retry with exponential
+ *   backoff + jitter, honoring Retry-After. Total upstream attempts are
+ *   hard-capped at 3 so a cascade cannot burn unbounded model quota.
+ * - Non-retryable errors (401, 422, empty content) surface immediately.
  */
 export async function chatCompletion(request: ChatRequest): Promise<string> {
-  try {
-    return await postChatCompletion(buildBody(request, true));
-  } catch (firstError) {
-    if (firstError instanceof UpstreamError && firstError.status === 400) {
-      try {
-        return await postChatCompletion(buildBody(request, false));
-      } catch (secondError) {
-        if (secondError instanceof UpstreamError && !isRetryableStatus(secondError.status)) {
-          throw secondError;
-        }
-        return postChatCompletion(buildBody(request, false));
+  const MAX_ATTEMPTS = 3;
+  let body = buildBody(request, true);
+  let retryAfter: number | null = null;
+
+  for (let attemptIndex = 0; attemptIndex < MAX_ATTEMPTS; attemptIndex += 1) {
+    try {
+      return await postChatCompletion(body);
+    } catch (error) {
+      const upstream = error instanceof UpstreamError ? error : null;
+
+      // A 400 while JSON mode is enabled means the route may not support it —
+      // retry exactly once without JSON mode before considering non-retryable.
+      if (
+        attemptIndex === 0 &&
+        upstream?.status === 400 &&
+        body.response_format !== undefined
+      ) {
+        body = buildBody(request, false);
+        retryAfter = (upstream as UpstreamError & { retryAfter?: number | null }).retryAfter ?? null;
+        continue;
       }
+
+      if (upstream && !isRetryableStatus(upstream.status)) throw error;
+      if (attemptIndex >= MAX_ATTEMPTS - 1) throw error;
+
+      retryAfter = (upstream as UpstreamError & { retryAfter?: number | null }).retryAfter ?? retryAfter;
+      await sleep(backoffMs(attemptIndex, retryAfter));
     }
-    if (firstError instanceof UpstreamError && !isRetryableStatus(firstError.status)) {
-      throw firstError;
-    }
-    return postChatCompletion(buildBody(request, true));
   }
+
+  throw new Error('Unreachable: chatCompletion retry loop exhausted.');
 }

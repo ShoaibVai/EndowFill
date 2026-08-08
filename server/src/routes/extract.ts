@@ -23,6 +23,9 @@ import { HttpError, type NormalizedBBox } from '../validate.js';
 /** Cap per-page transcript size so multi-page scans stay well inside context. */
 const MAX_MARKDOWN_CHARS_PER_PAGE = 8000;
 const MAX_DETECTIONS = 200;
+/** Cap pages like the OCR/detect-fields routes so an unbounded pages array
+ * cannot build a 25 MiB prompt in one model call (cost + token-limit failure). */
+const MAX_PAGES = 20;
 
 const KNOWN_CATEGORIES = new Set([
   'identity',
@@ -79,6 +82,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseOcrResult(body: unknown): { pages: OcrPageInput[] } {
   if (!isRecord(body) || !isRecord(body.ocrResult) || !Array.isArray(body.ocrResult.pages)) {
     throw new HttpError('Request body must be { ocrResult: { pages: [...] } }.', 400, 'bad_request');
+  }
+  if (body.ocrResult.pages.length > MAX_PAGES) {
+    throw new HttpError(
+      `Too many pages in one request (max ${MAX_PAGES}).`,
+      413,
+      'too_many_pages'
+    );
   }
   return { pages: body.ocrResult.pages as OcrPageInput[] };
 }
@@ -149,8 +159,14 @@ function normalizeItems(raw: unknown, detections: FlatDetection[]): ItemReply[] 
   return items;
 }
 
-export function registerExtractRoute(app: FastifyInstance): void {
-  app.post('/api/ai/extract', async (request, reply) => {
+export function registerExtractRoute(
+  app: FastifyInstance,
+  rateLimit?: { max: number; timeWindow: number }
+): void {
+  app.post(
+    '/api/ai/extract',
+    { config: rateLimit ? { rateLimit } : undefined },
+    async (request, reply) => {
     const { pages } = parseOcrResult(request.body);
 
     const transcripts = pages.map((page, position) => {

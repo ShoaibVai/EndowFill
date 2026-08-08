@@ -120,10 +120,10 @@ export function normalizeBBox(raw: unknown): NormalizedBBox | null {
   if (x > 1.2 || y > 1.2 || width > 1.5 || height > 1.5) return null;
   const cx = clamp01(x);
   const cy = clamp01(y);
-  return {
-    x: cx,
-    y: cy,
-    width: Math.min(clamp01(width), 1 - cx),
-    height: Math.min(clamp01(height), 1 - cy),
-  };
+  // A box pushed past the right/bottom edge clamps to a zero-width/height box
+  // — reject those instead of handing a degenerate geometry to the overlay.
+  const cw = Math.min(clamp01(width), 1 - cx);
+  const ch = Math.min(clamp01(height), 1 - cy);
+  if (cw <= 0.001 || ch <= 0.001) return null;
+  return { x: cx, y: cy, width: cw, height: ch };
 }

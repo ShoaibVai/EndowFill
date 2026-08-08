@@ -30,6 +30,9 @@ import {
 /** Cap per-page transcript size so multi-page scans stay well inside context. */
 const MAX_MARKDOWN_CHARS_PER_PAGE = 8000;
 const MAX_DETECTIONS = 200;
+/** Cap pages like the OCR/detect-fields routes so an unbounded pages array
+ * cannot build an oversized prompt in one model call (cost + token-limit failure). */
+const MAX_PAGES = 20;
 
 const KNOWN_CATEGORIES = new Set([
   'identity',
@@ -82,6 +85,13 @@ interface ItemReply {
 function parseOcrResult(body: unknown): { pages: OcrPageInput[] } {
   if (!isRecord(body) || !isRecord(body.ocrResult) || !Array.isArray(body.ocrResult.pages)) {
     throw new HttpError('Request body must be { ocrResult: { pages: [...] } }.', 400, 'bad_request');
+  }
+  if (body.ocrResult.pages.length > MAX_PAGES) {
+    throw new HttpError(
+      `Too many pages in one request (max ${MAX_PAGES}).`,
+      413,
+      'too_many_pages'
+    );
   }
   return { pages: body.ocrResult.pages as OcrPageInput[] };
 }

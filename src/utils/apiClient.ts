@@ -355,7 +355,8 @@ async function performRefresh(): Promise<boolean> {
 // ── Core fetch ───────────────────────────────────────────────────────────────
 
 function buildUrl(path: string): string {
-  if (/^https?:\/\//i.test(path)) return path;
+  // Relative paths only. Absolute URLs would let a caller send the
+  // Authorization header to an arbitrary origin (token exfiltration).
   const normalized = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_URL}${normalized}`;
 }
@@ -450,6 +451,11 @@ export async function apiFetch<T>(
       signal,
     });
   } catch (err) {
+    // A caller-aborted request (via AbortController) is not a failure —
+    // surface it as `aborted` so callers can swallow it silently.
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError('Request aborted.', 0, 'aborted');
+    }
     const message =
       err instanceof Error && err.message ? err.message : 'Network request failed';
     throw new ApiError(message, 0, 'network_error');

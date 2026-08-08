@@ -108,6 +108,14 @@ export function useBulkScanQueue() {
   const pauseRef = useRef(false);
   const cancelRef = useRef(false);
   const dpiRef = useRef(300);
+  // Abort control for the in-flight OCR/extract requests.
+  const abortRef = useRef<AbortController | null>(null);
+  // Id of the item currently being processed (for abort-on-remove).
+  const processingIdRef = useRef<string | null>(null);
+  // Set when a retry/start request arrives while the loop is already running;
+  // the loop checks it at the top of each iteration and continues instead of
+  // stranding the re-queued item.
+  const restartRef = useRef(false);
 
   useEffect(() => {
     queueRef.current = queue;
@@ -117,6 +125,15 @@ export function useBulkScanQueue() {
     dpiRef.current = dpi;
   }, [dpi]);
 
+  // Abort any in-flight request on unmount so the model call stops server-side.
+  useEffect(
+    () => () => {
+      cancelRef.current = true;
+      abortRef.current?.abort();
+    },
+    []
+  );
+
   const updateItem = useCallback((id: string, patch: Partial<BulkQueueItem>) => {
     setQueue((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }, []);
@@ -124,6 +141,7 @@ export function useBulkScanQueue() {
   /** OCR + extract one file. Never throws: every failure lands on the item. */
   const processItem = useCallback(
     async (item: BulkQueueItem): Promise<void> => {
+      processingIdRef.current = item.id;
       setCurrentId(item.id);
       setProgressLabel(`Rasterizing ${item.file.name}…`);
       updateItem(item.id, { status: 'reading', error: undefined });
@@ -150,8 +168,14 @@ export function useBulkScanQueue() {
           dpi: dpiRef.current,
           filename: item.file.name,
           onChunkProgress: (label) => setProgressLabel(label),
+          signal: abortRef.current?.signal,
         });
       } catch (error) {
+        if (abortRef.current?.signal.aborted) {
+          // Cancelled mid-OCR — re-queue so a later Start can resume it.
+          updateItem(item.id, { status: 'queued' });
+          return;
+        }
         updateItem(item.id, { status: 'failed', error: describeError(error, 'OCR failed for this file.') });
         return;
       }
@@ -165,9 +189,14 @@ export function useBulkScanQueue() {
 
       let items: ExtractedItem[] = [];
       try {
-        const response = await api.post<ExtractResult>('/ai/extract', { ocrResult: ocr });
+        const response = await api.post<ExtractResult>(
+          '/ai/extract',
+          { ocrResult: ocr },
+          { signal: abortRef.current?.signal }
+        );
         items = Array.isArray(response.items) ? response.items : [];
       } catch (error) {
+        if (abortRef.current?.signal.aborted) return;
         // Extraction is a best-effort enrichment (same as AIScanPage): the
         // file stays "done" so the user can still send it or retry.
         console.warn('[useBulkScanQueue] extraction failed; continuing without items', error);
@@ -178,6 +207,7 @@ export function useBulkScanQueue() {
       }
 
       updateItem(item.id, { status: 'done', items, scannedAt: new Date().toISOString() });
+      processingIdRef.current = null;
     },
     [updateItem]
   );
@@ -188,21 +218,31 @@ export function useBulkScanQueue() {
     runningRef.current = true;
     cancelRef.current = false;
     pauseRef.current = false;
+    restartRef.current = false;
+    // Fresh abort control for this run — cancel/remove/clear can abort it.
+    abortRef.current = new AbortController();
     setIsRunning(true);
     setIsPaused(false);
 
     try {
-      while (!cancelRef.current && !pauseRef.current) {
-        const next = queueRef.current.find((item) => item.status === 'queued');
-        if (!next) break;
-        const position = queueRef.current.findIndex((item) => item.id === next.id);
-        setProgressLabel(
-          `Scanning file ${Math.max(position, 0) + 1} of ${queueRef.current.length} (${next.file.name})…`
-        );
-        await processItem(next);
-      }
+      do {
+        // A retry()/start() may have landed while we were mid-iteration:
+        // restartRef keeps the loop going so the re-queued item is picked up
+        // even though we don't get a fresh run() entry point.
+        restartRef.current = false;
+        while (!cancelRef.current && !pauseRef.current) {
+          const next = queueRef.current.find((item) => item.status === 'queued');
+          if (!next) break;
+          const position = queueRef.current.findIndex((item) => item.id === next.id);
+          setProgressLabel(
+            `Scanning file ${Math.max(position, 0) + 1} of ${queueRef.current.length} (${next.file.name})…`
+          );
+          await processItem(next);
+        }
+      } while (!cancelRef.current && !pauseRef.current && restartRef.current);
     } finally {
       runningRef.current = false;
+      abortRef.current = null;
       setIsRunning(false);
       setCurrentId(null);
       setProgressLabel('');
@@ -210,7 +250,6 @@ export function useBulkScanQueue() {
   }, [processItem]);
 
   const addFiles = useCallback((files: File[]): { added: number; rejected: FileRejection[] } => {
-    const existing = queueRef.current;
     const rejected: FileRejection[] = [];
     const additions: BulkQueueItem[] = [];
 
@@ -226,10 +265,6 @@ export function useBulkScanQueue() {
         });
         continue;
       }
-      if (existing.length + additions.length >= MAX_QUEUE_FILES) {
-        rejected.push({ name: file.name, reason: `Queue is full (${MAX_QUEUE_FILES} files max).` });
-        continue;
-      }
       additions.push({
         id: `bulk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         file,
@@ -238,10 +273,29 @@ export function useBulkScanQueue() {
       });
     }
 
+    let addedCount = 0;
     if (additions.length > 0) {
-      setQueue((prev) => [...prev, ...additions]);
+      // Enforce the queue cap against the latest queue. queueRef is updated
+      // synchronously below (not via the render-effect) so two addFiles calls
+      // in the same tick cannot exceed MAX_QUEUE_FILES.
+      const headroom = MAX_QUEUE_FILES - queueRef.current.length;
+      const accepted = additions.slice(0, Math.max(headroom, 0));
+      const dropped = additions.slice(Math.max(headroom, 0));
+      addedCount = accepted.length;
+      for (const item of dropped) {
+        rejected.push({ name: item.file.name, reason: `Queue is full (${MAX_QUEUE_FILES} files max).` });
+      }
+      if (accepted.length > 0) {
+        queueRef.current = [...queueRef.current, ...accepted];
+        setQueue((prev) => {
+          // Merge on top of the state source; the ref is authoritative for the
+          // cap check, state is the render source.
+          const seen = new Set(prev.map((item) => item.id));
+          return [...prev, ...accepted.filter((item) => !seen.has(item.id))];
+        });
+      }
     }
-    return { added: additions.length, rejected };
+    return { added: addedCount, rejected };
   }, []);
 
   const start = useCallback(() => {
@@ -271,18 +325,35 @@ export function useBulkScanQueue() {
   const retry = useCallback(
     (id: string) => {
       updateItem(id, { status: 'queued', error: undefined });
-      if (!isPaused) void run();
+      if (isPaused) {
+        pauseRef.current = false;
+        setIsPaused(false);
+      }
+      if (runningRef.current) {
+        // The loop is mid-iteration — flag it to keep going after the current
+        // file so the re-queued item is picked up without a manual Start.
+        restartRef.current = true;
+        return;
+      }
+      void run();
     },
     [isPaused, run, updateItem]
   );
 
   const remove = useCallback((id: string) => {
     setQueue((prev) => prev.filter((item) => item.id !== id));
+    if (processingIdRef.current === id && abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
   }, []);
 
   const clear = useCallback(() => {
     cancelRef.current = true;
     pauseRef.current = false;
+    restartRef.current = false;
+    abortRef.current?.abort();
+    abortRef.current = null;
     setIsPaused(false);
     setQueue([]);
     setCurrentId(null);

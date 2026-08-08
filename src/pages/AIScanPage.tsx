@@ -36,7 +36,6 @@ import {
   loadPdfFromBytes,
   renderPageToCanvas,
 } from '../utils/pdfViewer';
-import { base64ToArrayBuffer } from '../utils/bufferUtils';
 import { rasterizeFileToPages } from '../utils/pdfRaster';
 import { runOcr } from '../utils/aiChunk';
 import { DetectionOverlay } from '../components/scan/DetectionOverlay';
@@ -86,6 +85,15 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
+function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error('Could not read the file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 function isPdfFile(file: File): boolean {
   return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 }
@@ -97,11 +105,20 @@ function round3(value: number): number {
 /** Flatten OCR detections across pages into stable, id-able entries. */
 function flattenDetections(result: OcrResult): Detection[] {
   const list: Detection[] = [];
+  const seenIds = new Set<string>();
   for (const page of result.pages ?? []) {
     for (const detection of page.detections ?? []) {
       const { x, y, width, height } = detection.bbox;
+      // Derive a stable id from geometry, de-duplicated within this pass so
+      // overlapping/duplicate boxes get distinct ids (React keys + overlay).
+      let id = `det-${page.pageIndex}-${round3(x)}-${round3(y)}-${round3(width)}-${round3(height)}`;
+      if (seenIds.has(id)) {
+        const suffix = seenIds.size + 1;
+        id = `${id}-${suffix}`;
+      }
+      seenIds.add(id);
       list.push({
-        id: `det-${page.pageIndex}-${round3(x)}-${round3(y)}-${round3(width)}-${round3(height)}`,
+        id,
         pageIndex: page.pageIndex,
         bbox: detection.bbox,
         label: detection.label || 'text',
@@ -179,6 +196,10 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cancelledRef = useRef(false);
   const didInitRef = useRef(false);
+  // Per-run identity + abort control: a new scan increments the run id and
+  // aborts the previous one, so concurrent runs can never race for state.
+  const scanRunIdRef = useRef(0);
+  const scanAbortRef = useRef<AbortController | null>(null);
 
   const isImage = file ? file.type.startsWith('image/') : false;
   const imageSrc =
@@ -189,45 +210,61 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
   // ── Scan pipeline ──────────────────────────────────────────────────────────
 
   const runScan = useCallback(async (target: File, targetDpi: number) => {
+    // Invalidate any in-flight scan and start a new run generation.
+    const runId = ++scanRunIdRef.current;
+    scanAbortRef.current?.abort();
+    const abortController = new AbortController();
+    scanAbortRef.current = abortController;
     cancelledRef.current = false;
     setScanError(null);
     setPhase('scanning');
     setScanProgress('Reading file…');
 
+    const isCurrentRun = (): boolean =>
+      scanRunIdRef.current === runId && !abortController.signal.aborted;
+
     try {
-      const base64 = await readFileAsBase64(target);
-      if (cancelledRef.current) return;
-      setFileBase64(base64);
-
-      setScanProgress(`Rasterizing pages (${targetDpi} DPI)…`);
-      const pages = await rasterizeFileToPages(target, targetDpi, setScanProgress);
-      if (cancelledRef.current) return;
-
-      setScanProgress(`Scanning pages with OCR (${targetDpi} DPI)…`);
-      const ocr = await runOcr(pages, {
-        dpi: targetDpi,
-        onChunkProgress: (label) => setScanProgress(label),
-      });
-      if (cancelledRef.current) return;
-      setOcrResult(ocr);
-
-      setScanProgress('Extracting structured information…');
-      let extracted: ExtractedItem[] = [];
-      try {
-        const response = await api.post<ExtractResult>('/ai/extract', { ocrResult: ocr });
-        extracted = Array.isArray(response.items) ? response.items : [];
-      } catch (extractError) {
-        // Extraction is a best-effort enrichment: fall back to raw OCR boxes.
-        console.warn('[AIScanPage] extraction failed; continuing with detections only', extractError);
-      }
-      if (cancelledRef.current) return;
-
-      const flat = flattenDetections(ocr);
-      const linked = linkItems(extracted, flat);
-
+      // Images keep a base64 data URI for inline preview; PDFs are read once
+      // as an ArrayBuffer and reused for rasterization AND the review viewer
+      // (avoiding a ~2x memory blow-up on multi-MB files).
       if (isPdfFile(target)) {
-        const pdf = await loadPdfFromBytes(base64ToArrayBuffer(base64));
-        if (cancelledRef.current) {
+        const bytes = await readFileAsArrayBuffer(target);
+        if (!isCurrentRun()) return;
+
+        setScanProgress(`Rasterizing pages (${targetDpi} DPI)…`);
+        const pages = await rasterizeFileToPages(target, targetDpi, setScanProgress, bytes);
+        if (!isCurrentRun()) return;
+
+        setScanProgress(`Scanning pages with OCR (${targetDpi} DPI)…`);
+        const ocr = await runOcr(pages, {
+          dpi: targetDpi,
+          onChunkProgress: (label) => setScanProgress(label),
+          signal: abortController.signal,
+        });
+        if (!isCurrentRun()) return;
+        setOcrResult(ocr);
+
+        setScanProgress('Extracting structured information…');
+        let extracted: ExtractedItem[] = [];
+        try {
+          const response = await api.post<ExtractResult>(
+            '/ai/extract',
+            { ocrResult: ocr },
+            { signal: abortController.signal }
+          );
+          extracted = Array.isArray(response.items) ? response.items : [];
+        } catch (extractError) {
+          if (abortController.signal.aborted) return;
+          // Extraction is a best-effort enrichment: fall back to raw OCR boxes.
+          console.warn('[AIScanPage] extraction failed; continuing with detections only', extractError);
+        }
+        if (!isCurrentRun()) return;
+
+        const flat = flattenDetections(ocr);
+        const linked = linkItems(extracted, flat);
+
+        const pdf = await loadPdfFromBytes(bytes);
+        if (!isCurrentRun()) {
           disposePdf(pdf);
           return;
         }
@@ -241,20 +278,67 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
           page.cleanup();
         }
         setPageRatios(ratios);
+        setImageRatio(null);
+
+        if (!isCurrentRun()) return;
+        setDetections(flat);
+        setItems(linked);
+        setCurrentPage(0);
+        setSelectedItemId(null);
+        setHoveredItemId(null);
+        setEditMode(false);
+        setPhase('review');
       } else {
+        const base64 = await readFileAsBase64(target);
+        if (!isCurrentRun()) return;
+        setFileBase64(base64);
+
+        setScanProgress(`Rasterizing pages (${targetDpi} DPI)…`);
+        const pages = await rasterizeFileToPages(target, targetDpi, setScanProgress);
+        if (!isCurrentRun()) return;
+
+        setScanProgress(`Scanning pages with OCR (${targetDpi} DPI)…`);
+        const ocr = await runOcr(pages, {
+          dpi: targetDpi,
+          onChunkProgress: (label) => setScanProgress(label),
+          signal: abortController.signal,
+        });
+        if (!isCurrentRun()) return;
+        setOcrResult(ocr);
+
+        setScanProgress('Extracting structured information…');
+        let extracted: ExtractedItem[] = [];
+        try {
+          const response = await api.post<ExtractResult>(
+            '/ai/extract',
+            { ocrResult: ocr },
+            { signal: abortController.signal }
+          );
+          extracted = Array.isArray(response.items) ? response.items : [];
+        } catch (extractError) {
+          if (abortController.signal.aborted) return;
+          // Extraction is a best-effort enrichment: fall back to raw OCR boxes.
+          console.warn('[AIScanPage] extraction failed; continuing with detections only', extractError);
+        }
+        if (!isCurrentRun()) return;
+
+        const flat = flattenDetections(ocr);
+        const linked = linkItems(extracted, flat);
+
         setPageRatios([]);
         setImageRatio(null);
-      }
 
-      setDetections(flat);
-      setItems(linked);
-      setCurrentPage(0);
-      setSelectedItemId(null);
-      setHoveredItemId(null);
-      setEditMode(false);
-      setPhase('review');
+        if (!isCurrentRun()) return;
+        setDetections(flat);
+        setItems(linked);
+        setCurrentPage(0);
+        setSelectedItemId(null);
+        setHoveredItemId(null);
+        setEditMode(false);
+        setPhase('review');
+      }
     } catch (error) {
-      if (cancelledRef.current) return;
+      if (!isCurrentRun()) return;
       setScanError(error instanceof Error ? error.message : 'Scan failed. Please try again.');
       setPhase('upload');
     }
@@ -302,6 +386,8 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
 
   const handleNewScan = useCallback(() => {
     cancelledRef.current = true;
+    scanAbortRef.current?.abort();
+    scanRunIdRef.current += 1;
     if (pdfRef.current) {
       disposePdf(pdfRef.current);
       pdfRef.current = null;
@@ -327,6 +413,8 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
   useEffect(
     () => () => {
       cancelledRef.current = true;
+      scanRunIdRef.current += 1;
+      scanAbortRef.current?.abort();
       if (pdfRef.current) disposePdf(pdfRef.current);
     },
     []
@@ -425,7 +513,7 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
   const handleAddItem = useCallback(
     (draft: { label: string; value: string; category: string }) => {
       const item: ExtractedItem = {
-        id: `item-manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `item-manual-${crypto.randomUUID()}`,
         label: draft.label,
         value: draft.value,
         category: draft.category || 'other',
@@ -488,9 +576,9 @@ export function AIScanPage({ onExtracted }: AIScanPageProps) {
   const commitManualItem = useCallback(() => {
     if (!drawPending) return;
     const label = drawLabel.trim() || 'Untitled';
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const detectionId = `det-manual-${stamp}`;
-    const itemId = `item-manual-${stamp}`;
+    const uid = crypto.randomUUID();
+    const detectionId = `det-manual-${uid}`;
+    const itemId = `item-manual-${uid}`;
     const detection: Detection = {
       id: detectionId,
       pageIndex: currentPage,

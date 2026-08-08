@@ -57,6 +57,8 @@ export interface AiScanOptions {
   filename?: string;
   /** Per-chunk progress label, e.g. "Scanning pages 3-5 of 8…". */
   onChunkProgress?: (label: string) => void;
+  /** Abort signal — when fired, in-flight requests are cancelled client-side. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -76,11 +78,15 @@ export async function runOcr(pages: RasterPage[], options: AiScanOptions): Promi
         `Scanning pages ${from}-${to} of ${pages.length} (${options.dpi} DPI)…`
       );
     }
-    const result = await api.post<OcrResult>('/ai/ocr', {
-      pages: chunk,
-      dpi: options.dpi,
-      ...(options.filename ? { filename: options.filename } : {}),
-    });
+    const result = await api.post<OcrResult>(
+      '/ai/ocr',
+      {
+        pages: chunk,
+        dpi: options.dpi,
+        ...(options.filename ? { filename: options.filename } : {}),
+      },
+      { signal: options.signal }
+    );
     merged.pageCount += result.pageCount;
     merged.pages.push(...result.pages);
   }
@@ -94,7 +100,8 @@ export async function runOcr(pages: RasterPage[], options: AiScanOptions): Promi
 export async function runDetectFields(
   pages: RasterPage[],
   dpi: number,
-  onChunkProgress?: (label: string) => void
+  onChunkProgress?: (label: string) => void,
+  signal?: AbortSignal
 ): Promise<DetectFieldsResult> {
   const chunks = chunkPages(pages);
   const fields: DetectFieldsResult['fields'] = [];
@@ -106,10 +113,14 @@ export async function runDetectFields(
     if (chunks.length > 1) {
       onChunkProgress?.(`Detecting fields on pages ${from}-${to} of ${pages.length}…`);
     }
-    const result = await api.post<DetectFieldsResult>('/ai/detect-fields', {
-      pages: chunk,
-      dpi,
-    });
+    const result = await api.post<DetectFieldsResult>(
+      '/ai/detect-fields',
+      {
+        pages: chunk,
+        dpi,
+      },
+      { signal }
+    );
     fields.push(...result.fields);
   }
   return { fields };

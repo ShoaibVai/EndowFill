@@ -126,12 +126,12 @@ export function normalizeBBox(raw: unknown): NormalizedBBox | null {
   if (x > 1.2 || y > 1.2 || width > 1.5 || height > 1.5) return null;
   const cx = clamp01(x);
   const cy = clamp01(y);
-  return {
-    x: cx,
-    y: cy,
-    width: Math.min(clamp01(width), 1 - cx),
-    height: Math.min(clamp01(height), 1 - cy),
-  };
+  // A box pushed past the right/bottom edge clamps to a zero-width/height box
+  // — reject those instead of handing a degenerate geometry to the overlay.
+  const cw = Math.min(clamp01(width), 1 - cx);
+  const ch = Math.min(clamp01(height), 1 - cy);
+  if (cw <= 0.001 || ch <= 0.001) return null;
+  return { x: cx, y: cy, width: cw, height: ch };
 }
 
 // ── Response helpers (Vercel Node functions) ─────────────────────────────────
@@ -154,22 +154,16 @@ export interface HandlerResponse {
 
 /**
  * Serialize any thrown error as `{ message, code }` (ApiError-compatible).
- * HttpError keeps its status/code; UpstreamError maps status 0 (network) to
- * 502; everything else becomes 500 `internal_error`.
+ * HttpError keeps its status/code. Everything else becomes 500 with a
+ * generic message — the raw error text (which can embed model output from
+ * hostile documents) is never reflected to the client. Routes map
+ * UpstreamError → HttpError themselves, so only unexpected failures land
+ * here.
  */
 export function sendError(res: HandlerResponse, error: unknown): void {
   if (error instanceof HttpError) {
     return res.status(error.statusCode).json({ message: error.message, code: error.code });
   }
-  const message = error instanceof Error ? error.message : 'Internal server error.';
-  res.status(500).json({ message, code: 'internal_error' });
-}
-
-/** Upstream-agnostic mapping for model-call failures. */
-export function upstreamErrorToHttp(error: unknown, code: string): HttpError {
-  if (error instanceof HttpError) return error;
-  if (error instanceof Error) {
-    return new HttpError(error.message, 502, code);
-  }
-  return new HttpError('Model request failed.', 502, code);
+  console.error('[api/ai] unexpected error', error);
+  res.status(500).json({ message: 'Internal server error.', code: 'internal_error' });
 }

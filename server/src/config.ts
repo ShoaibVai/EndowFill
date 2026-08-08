@@ -7,8 +7,16 @@
  *   OPENCODE_GO_MODEL     Vision model id (default "kimi-k2.6"; "kimi-k3" for max quality)
  *   OPENCODE_GO_BASE_URL  OpenAI-compatible base (default "https://opencode.ai/zen/go/v1")
  *   PORT                  Listen port (default 8787 — nginx proxies /api/ here)
- *   HOST                  Bind address (default 0.0.0.0)
- *   CORS_ORIGIN           Allowed browser origin(s), comma-separated (default "*")
+ *   HOST                  Bind address (default 127.0.0.1)
+ *   CORS_ORIGIN           Allowed browser origin(s), comma-separated
+ *   SUPABASE_JWT_SECRET   Supabase project JWT secret (project settings → API).
+ *                        When set, /api/ai/* requires a valid Supabase access
+ *                        token (the SPA sends it via Authorization: Bearer).
+ *                        When unset, auth is not enforced and a warning is
+ *                        logged at boot (development only — never leave it
+ *                        unset in production; these endpoints burn model cost).
+ *   RATE_LIMIT_MAX        Max /api/ai/* requests per window per IP (default 10)
+ *   RATE_LIMIT_WINDOW_MS  Rate-limit window in ms (default 60_000)
  *
  * Example server/.env:
  *   OPENCODE_GO_API_KEY=sk-...
@@ -41,9 +49,14 @@ export const config = {
   openCodeGoBaseUrl: optional('OPENCODE_GO_BASE_URL', 'https://opencode.ai/zen/go/v1').replace(/\/+$/, ''),
   /** HTTP listen settings. */
   port: Number(optional('PORT', '8787')),
-  host: optional('HOST', '0.0.0.0'),
-  /** CORS allowed origin(s) — "*" or comma-separated list. */
-  corsOrigin: optional('CORS_ORIGIN', '*'),
+  host: optional('HOST', '127.0.0.1'),
+  /** CORS allowed origin(s) — comma-separated. Never "*". */
+  corsOrigin: optional('CORS_ORIGIN', 'http://localhost:5173'),
+  /** Supabase JWT secret — when set, /api/ai/* requires a valid Bearer token. */
+  supabaseJwtSecret: optional('SUPABASE_JWT_SECRET', ''),
+  /** Rate limit for /api/ai/* (per IP per window). */
+  rateLimitMax: Number(optional('RATE_LIMIT_MAX', '10')),
+  rateLimitWindowMs: Number(optional('RATE_LIMIT_WINDOW_MS', '60000')),
 } as const;
 
 /** Milliseconds before an upstream model call is aborted (vision calls are slow). */
