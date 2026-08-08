@@ -11,8 +11,8 @@
  * Reply: { items: [{ id, label, value, category, confidence, sourceBBox, pageIndex }] }
  */
 
-import { chatCompletion, UpstreamError } from './_lib/opencodeGo.js';
-import { extractJson } from './_lib/jsonExtract.js';
+import { UpstreamError } from './_lib/opencodeGo.js';
+import { chatJson } from './_lib/chatJson.js';
 import {
   EXTRACT_SYSTEM,
   extractUserPrompt,
@@ -175,13 +175,16 @@ export default async function handler(req: HandlerRequest, res: HandlerResponse)
     });
     const detections = flattenDetections(pages);
 
-    let content: string;
+    let parsed: { items?: unknown };
     try {
-      content = await chatCompletion({
-        system: EXTRACT_SYSTEM,
-        userText: extractUserPrompt(transcripts, detections),
-        maxTokens: 4096,
-      });
+      parsed = await chatJson<{ items?: unknown }>(
+        {
+          system: EXTRACT_SYSTEM,
+          userText: extractUserPrompt(transcripts, detections),
+          maxTokens: 4096,
+        },
+        'extract'
+      );
     } catch (error) {
       if (error instanceof UpstreamError) {
         throw new HttpError(
@@ -192,8 +195,6 @@ export default async function handler(req: HandlerRequest, res: HandlerResponse)
       }
       throw error;
     }
-
-    const parsed = extractJson<{ items?: unknown }>(content, 'extract');
     return res.status(200).json({ items: normalizeItems(parsed.items, detections) });
   } catch (error) {
     return sendError(res, error);

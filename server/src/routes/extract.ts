@@ -11,8 +11,8 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { chatCompletion, UpstreamError } from '../opencodeGo.js';
-import { extractJson } from '../jsonExtract.js';
+import { UpstreamError } from '../opencodeGo.js';
+import { chatJson } from '../chatJson.js';
 import {
   EXTRACT_SYSTEM,
   extractUserPrompt,
@@ -169,21 +169,22 @@ export function registerExtractRoute(app: FastifyInstance): void {
     });
     const detections = flattenDetections(pages);
 
-    let content: string;
+    let parsed: { items?: unknown };
     try {
-      content = await chatCompletion({
-        system: EXTRACT_SYSTEM,
-        userText: extractUserPrompt(transcripts, detections),
-        maxTokens: 4096,
-      });
+      parsed = await chatJson<{ items?: unknown }>(
+        {
+          system: EXTRACT_SYSTEM,
+          userText: extractUserPrompt(transcripts, detections),
+          maxTokens: 4096,
+        },
+        'extract'
+      );
     } catch (error) {
       if (error instanceof UpstreamError) {
         throw new HttpError(error.message, error.status === 0 ? 502 : error.status, 'extract_upstream_failed');
       }
       throw error;
     }
-
-    const parsed = extractJson<{ items?: unknown }>(content, 'extract');
     return reply.send({ items: normalizeItems(parsed.items, detections) });
   });
 }

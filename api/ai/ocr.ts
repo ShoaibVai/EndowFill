@@ -15,8 +15,8 @@
  * backend instead (see validate.ts).
  */
 
-import { chatCompletion, UpstreamError } from './_lib/opencodeGo.js';
-import { extractJson } from './_lib/jsonExtract.js';
+import { UpstreamError } from './_lib/opencodeGo.js';
+import { chatJson } from './_lib/chatJson.js';
 import { OCR_SYSTEM, ocrUserPrompt } from './_lib/prompts.js';
 import {
   HttpError,
@@ -78,14 +78,17 @@ export default async function handler(req: HandlerRequest, res: HandlerResponse)
     const results: OcrPageReply[] = [];
 
     for (const page of pages) {
-      let content: string;
+      let parsed: OcrPageModel;
       try {
-        content = await chatCompletion({
-          system: OCR_SYSTEM,
-          userText: ocrUserPrompt(page.pageIndex),
-          images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
-          maxTokens: 4096,
-        });
+        parsed = await chatJson<OcrPageModel>(
+          {
+            system: OCR_SYSTEM,
+            userText: ocrUserPrompt(page.pageIndex),
+            images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
+            maxTokens: 8192,
+          },
+          'ocr'
+        );
       } catch (error) {
         if (error instanceof UpstreamError) {
           throw new HttpError(
@@ -96,8 +99,6 @@ export default async function handler(req: HandlerRequest, res: HandlerResponse)
         }
         throw error;
       }
-
-      const parsed = extractJson<OcrPageModel>(content, 'ocr');
       results.push({
         pageIndex: page.pageIndex,
         markdown: typeof parsed.markdown === 'string' ? parsed.markdown : '',

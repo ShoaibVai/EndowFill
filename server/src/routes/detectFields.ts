@@ -9,8 +9,8 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { chatCompletion, UpstreamError } from '../opencodeGo.js';
-import { extractJson } from '../jsonExtract.js';
+import { UpstreamError } from '../opencodeGo.js';
+import { chatJson } from '../chatJson.js';
 import { DETECT_FIELDS_SYSTEM, detectFieldsUserPrompt } from '../prompts.js';
 import { HttpError, normalizeBBox, parsePagesBody, type NormalizedBBox } from '../validate.js';
 
@@ -71,14 +71,17 @@ export function registerDetectFieldsRoute(app: FastifyInstance): void {
     const allFields: FieldReply[] = [];
 
     for (const page of pages) {
-      let content: string;
+      let parsed: { fields?: unknown };
       try {
-        content = await chatCompletion({
-          system: DETECT_FIELDS_SYSTEM,
-          userText: detectFieldsUserPrompt(page.pageIndex),
-          images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
-          maxTokens: 4096,
-        });
+        parsed = await chatJson<{ fields?: unknown }>(
+          {
+            system: DETECT_FIELDS_SYSTEM,
+            userText: detectFieldsUserPrompt(page.pageIndex),
+            images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
+            maxTokens: 4096,
+          },
+          'detect-fields'
+        );
       } catch (error) {
         if (error instanceof UpstreamError) {
           throw new HttpError(error.message, error.status === 0 ? 502 : error.status, 'detect_upstream_failed');
@@ -86,7 +89,6 @@ export function registerDetectFieldsRoute(app: FastifyInstance): void {
         throw error;
       }
 
-      const parsed = extractJson<{ fields?: unknown }>(content, 'detect-fields');
       allFields.push(...normalizeFields(parsed.fields, page.pageIndex));
     }
 

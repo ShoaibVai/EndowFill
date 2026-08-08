@@ -9,8 +9,8 @@
  * Reply: { fields: [{ label, fieldType, bbox, pageIndex, options?, hint? }] }
  */
 
-import { chatCompletion, UpstreamError } from './_lib/opencodeGo.js';
-import { extractJson } from './_lib/jsonExtract.js';
+import { UpstreamError } from './_lib/opencodeGo.js';
+import { chatJson } from './_lib/chatJson.js';
 import { DETECT_FIELDS_SYSTEM, detectFieldsUserPrompt } from './_lib/prompts.js';
 import {
   HttpError,
@@ -82,14 +82,17 @@ export default async function handler(req: HandlerRequest, res: HandlerResponse)
     const allFields: FieldReply[] = [];
 
     for (const page of pages) {
-      let content: string;
+      let parsed: { fields?: unknown };
       try {
-        content = await chatCompletion({
-          system: DETECT_FIELDS_SYSTEM,
-          userText: detectFieldsUserPrompt(page.pageIndex),
-          images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
-          maxTokens: 4096,
-        });
+        parsed = await chatJson<{ fields?: unknown }>(
+          {
+            system: DETECT_FIELDS_SYSTEM,
+            userText: detectFieldsUserPrompt(page.pageIndex),
+            images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
+            maxTokens: 4096,
+          },
+          'detect-fields'
+        );
       } catch (error) {
         if (error instanceof UpstreamError) {
           throw new HttpError(
@@ -101,7 +104,6 @@ export default async function handler(req: HandlerRequest, res: HandlerResponse)
         throw error;
       }
 
-      const parsed = extractJson<{ fields?: unknown }>(content, 'detect-fields');
       allFields.push(...normalizeFields(parsed.fields, page.pageIndex));
     }
 

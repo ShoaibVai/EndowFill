@@ -10,6 +10,8 @@ export const OCR_SYSTEM = [
   'You are a precise OCR and document-layout engine.',
   'You analyze a scanned document page image and return ONLY valid JSON.',
   'Never wrap JSON in markdown fences. Never add commentary.',
+  'Your entire response must be exactly one JSON object and nothing else.',
+  'Do not narrate your analysis, do not explain, do not say "Here is".',
 ].join(' ');
 
 export function ocrUserPrompt(pageIndex: number): string {
@@ -45,6 +47,8 @@ export const EXTRACT_SYSTEM = [
   'You are a structured-data extraction engine for student documents.',
   'You receive an OCR transcript plus layout regions and return ONLY valid JSON.',
   'Never wrap JSON in markdown fences. Never add commentary.',
+  'Your entire response must be exactly one JSON object and nothing else.',
+  'Do not narrate your analysis, do not explain, do not say "Here is".',
 ].join(' ');
 
 export interface ExtractDetectionInput {
@@ -100,6 +104,8 @@ export const DETECT_FIELDS_SYSTEM = [
   'You are a form-analysis engine.',
   'You analyze an image of a blank application form page and return ONLY valid JSON.',
   'Never wrap JSON in markdown fences. Never add commentary.',
+  'Your entire response must be exactly one JSON object and nothing else.',
+  'Do not narrate your analysis, do not explain, do not say "Here is".',
 ].join(' ');
 
 export function detectFieldsUserPrompt(pageIndex: number): string {

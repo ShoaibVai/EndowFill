@@ -10,8 +10,8 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { chatCompletion, UpstreamError } from '../opencodeGo.js';
-import { extractJson } from '../jsonExtract.js';
+import { UpstreamError } from '../opencodeGo.js';
+import { chatJson } from '../chatJson.js';
 import { OCR_SYSTEM, ocrUserPrompt } from '../prompts.js';
 import { HttpError, normalizeBBox, parsePagesBody, type NormalizedBBox } from '../validate.js';
 
@@ -62,22 +62,23 @@ export function registerOcrRoute(app: FastifyInstance): void {
     const results: OcrPageReply[] = [];
 
     for (const page of pages) {
-      let content: string;
+      let parsed: OcrPageModel;
       try {
-        content = await chatCompletion({
-          system: OCR_SYSTEM,
-          userText: ocrUserPrompt(page.pageIndex),
-          images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
-          maxTokens: 4096,
-        });
+        parsed = await chatJson<OcrPageModel>(
+          {
+            system: OCR_SYSTEM,
+            userText: ocrUserPrompt(page.pageIndex),
+            images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
+            maxTokens: 8192,
+          },
+          'ocr'
+        );
       } catch (error) {
         if (error instanceof UpstreamError) {
           throw new HttpError(error.message, error.status === 0 ? 502 : error.status, 'ocr_upstream_failed');
         }
         throw error;
       }
-
-      const parsed = extractJson<OcrPageModel>(content, 'ocr');
       results.push({
         pageIndex: page.pageIndex,
         markdown: typeof parsed.markdown === 'string' ? parsed.markdown : '',
