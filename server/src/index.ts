@@ -132,7 +132,7 @@ app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: Fastif
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
-app.get('/api/health', async () => ({ ok: true, model: config.openCodeGoModel }));
+app.get('/api/health', async () => ({ ok: true, model: config.openRouterModel }));
 
 // Apply the AI rate limiter to the three model routes.
 const AI_RATE_LIMIT_CONFIG = { max: config.rateLimitMax, timeWindow: config.rateLimitWindowMs };
@@ -144,7 +144,7 @@ registerDetectFieldsRoute(app, AI_RATE_LIMIT_CONFIG);
 
 try {
   await app.listen({ port: config.port, host: config.host });
-  app.log.info(`EndowFill AI server listening on ${config.host}:${config.port} (model: ${config.openCodeGoModel})`);
+  app.log.info(`EndowFill AI server listening on ${config.host}:${config.port} (model: ${config.openRouterModel})`);
 } catch (error) {
   app.log.error(error);
   process.exit(1);

@@ -3,9 +3,9 @@
  *
  * Required environment variables (place in server/.env — gitignored):
  *
- *   OPENCODE_GO_API_KEY   API key from https://opencode.ai/auth (Go subscription)
- *   OPENCODE_GO_MODEL     Vision model id (default "kimi-k2.6"; "kimi-k3" for max quality)
- *   OPENCODE_GO_BASE_URL  OpenAI-compatible base (default "https://opencode.ai/zen/go/v1")
+ *   OPENROUTER_API_KEY    API key from https://openrouter.ai/keys
+ *   OPENROUTER_MODEL      Model id (default "openrouter/free" — the Free Models Router)
+ *   OPENROUTER_BASE_URL   OpenAI-compatible base (default "https://openrouter.ai/api/v1")
  *   PORT                  Listen port (default 8787 — nginx proxies /api/ here)
  *   HOST                  Bind address (default 127.0.0.1)
  *   CORS_ORIGIN           Allowed browser origin(s), comma-separated
@@ -19,8 +19,8 @@
  *   RATE_LIMIT_WINDOW_MS  Rate-limit window in ms (default 60_000)
  *
  * Example server/.env:
- *   OPENCODE_GO_API_KEY=sk-...
- *   OPENCODE_GO_MODEL=kimi-k2.6
+ *   OPENROUTER_API_KEY=sk-or-...
+ *   OPENROUTER_MODEL=openrouter/free
  *   PORT=8787
  */
 
@@ -41,12 +41,12 @@ function optional(name: string, fallback: string): string {
 }
 
 export const config = {
-  /** OpenCode Go API key (server-side only — never exposed to the browser). */
-  openCodeGoApiKey: required('OPENCODE_GO_API_KEY'),
-  /** Vision model served through OpenCode Go. */
-  openCodeGoModel: optional('OPENCODE_GO_MODEL', 'kimi-k2.6'),
+  /** OpenRouter API key (server-side only — never exposed to the browser). */
+  openRouterApiKey: required('OPENROUTER_API_KEY'),
+  /** Model served through OpenRouter (default: free models router). */
+  openRouterModel: optional('OPENROUTER_MODEL', 'openrouter/free'),
   /** OpenAI-compatible base URL (no trailing slash). */
-  openCodeGoBaseUrl: optional('OPENCODE_GO_BASE_URL', 'https://opencode.ai/zen/go/v1').replace(/\/+$/, ''),
+  openRouterBaseUrl: optional('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1').replace(/\/+$/, ''),
   /** HTTP listen settings. */
   port: Number(optional('PORT', '8787')),
   host: optional('HOST', '127.0.0.1'),

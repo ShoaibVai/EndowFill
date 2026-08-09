@@ -1,9 +1,9 @@
 /**
- * opencodeGo.ts — Minimal OpenAI-compatible chat client for OpenCode Go.
+ * opencodeGo.ts — Minimal OpenAI-compatible chat client.
  *
- * OpenCode Go exposes an OpenAI-compatible endpoint:
- *   POST {base}/chat/completions   (base default: https://opencode.ai/zen/go/v1)
- *   Authorization: Bearer <OPENCODE_GO_API_KEY>
+ * Backed by OpenRouter:
+ *   POST {base}/chat/completions    (base default: https://openrouter.ai/api/v1)
+ *   Authorization: Bearer <OPENROUTER_API_KEY>
  *
  * Vision requests send page images as `image_url` content parts with
  * base64 data URLs. The API key never leaves this server — the browser
@@ -98,14 +98,14 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 async function postChatCompletion(body: unknown): Promise<string> {
-  const url = `${config.openCodeGoBaseUrl}/chat/completions`;
+  const url = `${config.openRouterBaseUrl}/chat/completions`;
   let response: Response;
   try {
     response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.openCodeGoApiKey}`,
+        Authorization: `Bearer ${config.openRouterApiKey}`,
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
@@ -151,11 +151,7 @@ function buildBody(request: ChatRequest, withJsonMode: boolean): Record<string, 
   }
 
   const body: Record<string, unknown> = {
-    model: config.openCodeGoModel,
-    // Kimi (and other reasoning models) surface their chain-of-thought in
-    // content when it runs long, consuming the whole token budget before any
-    // JSON is emitted. Disable thinking: these endpoints demand JSON only.
-    thinking: { type: 'disabled' },
+    model: config.openRouterModel,
     messages: [
       { role: 'system', content: request.system },
       { role: 'user', content: userContent },
@@ -171,7 +167,7 @@ function buildBody(request: ChatRequest, withJsonMode: boolean): Record<string, 
  * Send a chat completion and return the assistant's raw text.
  *
  * - First attempt uses OpenAI JSON mode; a 400 (unsupported on some
- *   OpenCode Go routes) retries once without it.
+ *   OpenRouter models) retries once without it.
  * - Transient statuses (429/5xx) or network failures retry with exponential
  *   backoff + jitter, honoring Retry-After. Total upstream attempts are
  *   hard-capped at 3 so a cascade cannot burn unbounded model quota.

@@ -1,7 +1,7 @@
 /**
  * pdfRaster.ts — Client-side rasterization for the AI endpoints.
  *
- * The Fastify AI server stays thin (images → OpenCode Go → JSON), so PDFs
+ * The Fastify AI server stays thin (images → OpenRouter → JSON), so PDFs
  * are rasterized HERE in the browser with the same pdf.js instance the
  * review UI already uses, then uploaded as JPEG pages:
  *

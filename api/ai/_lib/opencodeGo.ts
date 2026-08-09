@@ -1,12 +1,12 @@
 /**
- * api/ai/_lib/opencodeGo.ts — Minimal OpenAI-compatible chat client for OpenCode Go.
+ * api/ai/_lib/opencodeGo.ts — Minimal OpenAI-compatible chat client.
  *
- * Vercel serverless port of server/src/opencodeGo.ts. The API key is read from
- * the OPENCODE_GO_API_KEY environment variable (set in the Vercel project
- * settings) and never leaves the function.
+ * Vercel serverless port of server/src/opencodeGo.ts, backed by OpenRouter.
+ * The API key is read from the OPENROUTER_API_KEY environment variable (set
+ * in the Vercel project settings) and never leaves the function.
  *
- *   POST {base}/chat/completions   (base default: https://opencode.ai/zen/go/v1)
- *   Authorization: Bearer <OPENCODE_GO_API_KEY>
+ *   POST {base}/chat/completions   (base default: https://openrouter.ai/api/v1)
+ *   Authorization: Bearer <OPENROUTER_API_KEY>
  */
 
 export interface PageImage {
@@ -38,10 +38,10 @@ export class UpstreamError extends Error {
   }
 }
 
-const OPENCODE_GO_API_KEY = process.env.OPENCODE_GO_API_KEY ?? '';
-const OPENCODE_GO_MODEL = process.env.OPENCODE_GO_MODEL?.trim() || 'kimi-k2.6';
-const OPENCODE_GO_BASE_URL = (
-  process.env.OPENCODE_GO_BASE_URL?.trim() || 'https://opencode.ai/zen/go/v1'
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? '';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'openrouter/free';
+const OPENROUTER_BASE_URL = (
+  process.env.OPENROUTER_BASE_URL?.trim() || 'https://openrouter.ai/api/v1'
 ).replace(/\/+$/, '');
 /** Milliseconds before an upstream model call is aborted. */
 const MODEL_TIMEOUT_MS = 180_000;
@@ -82,20 +82,20 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function postChatCompletion(body: unknown): Promise<string> {
-  if (!OPENCODE_GO_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     throw new UpstreamError(
-      'OPENCODE_GO_API_KEY is not configured on this deployment. Set it in the Vercel project environment variables and redeploy.',
+      'OPENROUTER_API_KEY is not configured on this deployment. Set it in the Vercel project environment variables and redeploy.',
       500
     );
   }
-  const url = `${OPENCODE_GO_BASE_URL}/chat/completions`;
+  const url = `${OPENROUTER_BASE_URL}/chat/completions`;
   let response: Response;
   try {
     response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENCODE_GO_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
@@ -139,11 +139,7 @@ function buildBody(request: ChatRequest, withJsonMode: boolean): Record<string, 
   }
 
   const body: Record<string, unknown> = {
-    model: OPENCODE_GO_MODEL,
-    // Kimi (and other reasoning models) surface their chain-of-thought in
-    // content when it runs long, consuming the whole token budget before any
-    // JSON is emitted. Disable thinking: these endpoints demand JSON only.
-    thinking: { type: 'disabled' },
+    model: OPENROUTER_MODEL,
     messages: [
       { role: 'system', content: request.system },
       { role: 'user', content: userContent },
@@ -159,7 +155,7 @@ function buildBody(request: ChatRequest, withJsonMode: boolean): Record<string, 
  * Send a chat completion and return the assistant's raw text.
  *
  * - First attempt uses OpenAI JSON mode; a 400 (unsupported on some
- *   OpenCode Go routes) retries once without it.
+ *   OpenRouter models) retries once without it.
  * - Transient statuses (429/5xx) or network failures retry with exponential
  *   backoff + jitter. Total upstream attempts are hard-capped at 3 so a
  *   cascade cannot burn unbounded model quota.

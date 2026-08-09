@@ -1,7 +1,7 @@
 /**
  * api/ai/ocr.ts — Vercel serverless POST /api/ai/ocr
  *
- * Serverless port of server/src/routes/ocr.ts. Calls the OpenCode Go API
+ * Serverless port of server/src/routes/ocr.ts. Calls the OpenRouter API
  * directly, so AI scanning works on Vercel deployments without the
  * self-hosted Fastify server.
  *

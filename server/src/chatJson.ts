@@ -1,7 +1,7 @@
 /**
  * chatJson.ts — JSON-parse with corrective retry.
  *
- * Some OpenCode Go routes ignore `response_format: json_object`, and the
+ * Some OpenRouter models ignore `response_format: json_object`, and the
  * vision model then narrates its analysis instead of emitting JSON. This
  * helper retries once with a hard instruction to reply with JSON only, so
  * a narration slip becomes a one-call retry instead of a failed scan.

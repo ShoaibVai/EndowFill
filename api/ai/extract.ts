@@ -1,7 +1,7 @@
 /**
  * api/ai/extract.ts — Vercel serverless POST /api/ai/extract
  *
- * Serverless port of server/src/routes/extract.ts. Text-only OpenCode Go
+ * Serverless port of server/src/routes/extract.ts. Text-only OpenRouter
  * call that structures an OCR transcript into labeled items; source regions
  * are referenced by index and mapped back server-side to bbox/pageIndex so
  * the frontend can draw highlight boxes without trusting model-echoed
