@@ -1,0 +1,33 @@
+# EndowFill — Render Blueprint
+#
+# Defines the single web service that hosts the whole app (SPA + /api/* +
+# local PaddleOCR ONNX inference in one Docker container).
+#
+# To apply this Blueprint, open dashboard.render.com → New → Blueprint and
+# select the repo (Render applies render.yaml automatically). The CLI can
+# validate it with `render blueprints validate`.
+#
+# After creation, set the one required secret in the Render dashboard:
+#   SUPABASE_JWT_SECRET  (Supabase → Project Settings → API → JWT Secret)
+
+services:
+  - type: web
+    name: endowfill
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SUPABASE_JWT_SECRET
+        sync: false # Prompt for the value in the Render dashboard
+      - key: OCR_MODEL_PRESET
+        value: v6-small
+      - key: OCR_WARMUP
+        value: '1'
+      - key: LOG_LEVEL
+        value: warn
+      - key: CORS_ORIGIN
+        value: https://endowfill.onrender.com

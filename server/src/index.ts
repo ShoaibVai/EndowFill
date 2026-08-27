@@ -1,26 +1,31 @@
 /**
- * index.ts — EndowFill AI server entrypoint.
+ * index.ts — EndowFill server entrypoint.
  *
  * Fastify backend serving the OCR / extraction / form-field detection
- * endpoints consumed by the SPA (via the office server's nginx /api/
- * proxy, or the Vite dev proxy on localhost).
+ * endpoints consumed by the SPA, PLUS the built frontend as a static site
+ * with an SPA fallback — one process, one Render web service.
  *
  *   GET  /api/health             → { ok, model }
  *   POST /api/ai/ocr             → page markdown + layout detections
  *   POST /api/ai/extract         → structured items from an OCR result
  *   POST /api/ai/detect-fields   → fillable fields on a blank form
+ *   GET  /*                      → static SPA (fallback to /index.html)
  *
- * Errors are serialized as `{ message, code }` — the exact shape the
+ * All three AI routes run PaddleOCR ONNX models locally — no external API
+ * keys. Errors are serialized as `{ message, code }` — the exact shape the
  * frontend's ApiError (utils/apiClient.ts) surfaces to the user.
  */
 
 import Fastify from 'fastify';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import path from 'node:path';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { jwtVerify } from 'jose';
 import { BODY_LIMIT_BYTES, config } from './config.js';
 import { HttpError } from './validate.js';
+import { initialize, isReady } from './ocr/engine.js';
 import { registerOcrRoute } from './routes/ocr.js';
 import { registerExtractRoute } from './routes/extract.js';
 import { registerDetectFieldsRoute } from './routes/detectFields.js';
@@ -28,10 +33,10 @@ import { registerDetectFieldsRoute } from './routes/detectFields.js';
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL ?? 'info' },
   bodyLimit: BODY_LIMIT_BYTES,
-  // Vision calls can run for minutes on long documents.
+  // Local OCR can take tens of seconds per page on small instances.
   requestTimeout: 300_000,
-  // The app sits behind nginx (/api/ -> Fastify) — trust X-Forwarded-For so
-  // rate limiting and logs see the real client IP instead of the proxy's.
+  // The app sits behind Render's proxy — trust X-Forwarded-For so rate
+  // limiting and logs see the real client IP instead of the proxy's.
   trustProxy: true,
   genReqId: () => crypto.randomUUID(),
 });
@@ -52,7 +57,7 @@ await app.register(cors, {
   origin: corsOrigins.length > 0 ? corsOrigins : false,
 });
 
-// ── Rate limit /api/ai/* — these endpoints burn paid model quota ────────────
+// ── Rate limit /api/ai/* — OCR is CPU-bound on small instances ──────────────
 await app.register(rateLimit, {
   global: false,
   max: config.rateLimitMax,
@@ -77,7 +82,7 @@ const authSecret = new TextEncoder().encode(config.supabaseJwtSecret);
 if (!config.supabaseJwtSecret) {
   app.log.warn(
     'SUPABASE_JWT_SECRET is not set — /api/ai/* will not require authentication. ' +
-      'These endpoints run paid model calls; set SUPABASE_JWT_SECRET in production.'
+      'Set SUPABASE_JWT_SECRET in production.'
   );
 }
 
@@ -132,7 +137,12 @@ app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: Fastif
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
-app.get('/api/health', async () => ({ ok: true, model: config.openRouterModel }));
+app.get('/api/health', async () => ({
+  ok: true,
+  model: config.ocrModelPreset,
+  engine: 'paddle-ocr-onnx',
+  ready: isReady(),
+}));
 
 // Apply the AI rate limiter to the three model routes.
 const AI_RATE_LIMIT_CONFIG = { max: config.rateLimitMax, timeWindow: config.rateLimitWindowMs };
@@ -140,11 +150,37 @@ registerOcrRoute(app, AI_RATE_LIMIT_CONFIG);
 registerExtractRoute(app, AI_RATE_LIMIT_CONFIG);
 registerDetectFieldsRoute(app, AI_RATE_LIMIT_CONFIG);
 
+// ── Static SPA serving (production) ─────────────────────────────────────────
+const staticDir = path.resolve(process.cwd(), config.staticDir);
+await app.register(fastifyStatic, {
+  root: staticDir,
+  // Cache aggressively: Vite builds emit content-hashed assets.
+  maxAge: '1y',
+});
+
+// SPA fallback: any non-API GET without a matching file serves index.html.
+app.setNotFoundHandler((request, reply) => {
+  if (request.method !== 'GET' || request.url.startsWith('/api')) {
+    return reply.status(404).send({ message: 'Not found.', code: 'not_found' });
+  }
+  return reply.sendFile('index.html');
+});
+
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
 try {
   await app.listen({ port: config.port, host: config.host });
-  app.log.info(`EndowFill AI server listening on ${config.host}:${config.port} (model: ${config.openRouterModel})`);
+  app.log.info(
+    `EndowFill server listening on ${config.host}:${config.port} (OCR: ${config.ocrModelPreset} onnx)`
+  );
+
+  // Render sets OCR_WARMUP=1 so the first real request never pays model-load
+  // latency (important on free instances that sleep and cold-start).
+  if (process.env.OCR_WARMUP === '1') {
+    initialize()
+      .then(() => app.log.info('OCR engine warm — models loaded.'))
+      .catch((error) => app.log.error(`OCR warmup failed: ${error instanceof Error ? error.message : error}`));
+  }
 } catch (error) {
   app.log.error(error);
   process.exit(1);

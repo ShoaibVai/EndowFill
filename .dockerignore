@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Dependencies + build output (rebuilt inside the image)
+node_modules
+dist
+server/node_modules
+server/dist
+
+# Secrets — never in the image. .env.production is intentionally NOT ignored:
+# it only carries PUBLIC Vite values the frontend needs at build time.
+.env
+.env.local
+server/.env
+server/.env.local
+
+# Vercel legacy artifacts
+.vercel
+api
+
+# Editor/tooling
+.vscode
+.idea
+*.log
+plan.md
+remote_schema.sql
+supabase
+run.bat

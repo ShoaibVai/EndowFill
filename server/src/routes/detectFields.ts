@@ -4,26 +4,23 @@
  * Body:  { pages: [{ pageIndex, image_base64, mimeType }], dpi? }
  * Reply: { fields: [{ label, fieldType, bbox, pageIndex, options?, hint? }] }
  *
- * Per-page vision pass over a blank form; results are merged with the
- * pageIndex enforced server-side so a model slip can never misplace a field.
+ * OCRs each page with the local engine, then applies geometry heuristics
+ * (underlines → text/signature/photo fields, square outlines → checkbox
+ * groups, "Label:" fallback) to locate fillable regions. All boxes are
+ * normalized 0..1 page-relative.
  */
 
 import type { FastifyInstance } from 'fastify';
-import { UpstreamError } from '../opencodeGo.js';
-import { chatJson } from '../chatJson.js';
-import { DETECT_FIELDS_SYSTEM, detectFieldsUserPrompt } from '../prompts.js';
-import { HttpError, normalizeBBox, parsePagesBody, type NormalizedBBox } from '../validate.js';
+import { OcrModelError, recognizeImage } from '../ocr/engine.js';
+import { decodePage } from '../ocr/pages.js';
+import {
+  detectFields,
+  type FieldDraft,
+  type FieldType,
+} from '../ocr/detectFieldsRules.js';
+import { HttpError, parsePagesBody, type NormalizedBBox } from '../validate.js';
 
-type FieldType = 'text' | 'checkbox' | 'image' | 'signature';
 const KNOWN_TYPES = new Set<FieldType>(['text', 'checkbox', 'image', 'signature']);
-
-interface RawField {
-  label?: unknown;
-  fieldType?: unknown;
-  bbox?: unknown;
-  options?: unknown;
-  hint?: unknown;
-}
 
 interface FieldReply {
   label: string;
@@ -34,35 +31,17 @@ interface FieldReply {
   hint?: string;
 }
 
-function normalizeFields(raw: unknown, pageIndex: number): FieldReply[] {
-  if (!Array.isArray(raw)) return [];
-  const fields: FieldReply[] = [];
-  for (const entry of raw as RawField[]) {
-    if (typeof entry !== 'object' || entry === null) continue;
-    const bbox = normalizeBBox(entry.bbox);
-    if (!bbox) continue;
-
-    const fieldType =
-      typeof entry.fieldType === 'string' && KNOWN_TYPES.has(entry.fieldType as FieldType)
-        ? (entry.fieldType as FieldType)
-        : 'text';
-    const label =
-      typeof entry.label === 'string' && entry.label.trim() ? entry.label.trim() : 'Untitled field';
-
-    let options: string[] | undefined;
-    if (Array.isArray(entry.options)) {
-      const cleaned = entry.options
-        .map((option) => (typeof option === 'string' ? option.trim() : ''))
-        .filter((option) => option.length > 0);
-      if (cleaned.length > 0) options = cleaned;
-    }
-
-    const field: FieldReply = { label, fieldType, bbox, pageIndex };
-    if (options) field.options = options;
-    if (typeof entry.hint === 'string' && entry.hint.trim()) field.hint = entry.hint.trim();
-    fields.push(field);
-  }
-  return fields;
+function normalizeField(draft: FieldDraft): FieldReply {
+  const fieldType = KNOWN_TYPES.has(draft.fieldType) ? draft.fieldType : 'text';
+  const field: FieldReply = {
+    label: draft.label.trim() || 'Untitled field',
+    fieldType,
+    bbox: draft.bbox,
+    pageIndex: draft.pageIndex,
+  };
+  if (draft.options && draft.options.length > 0) field.options = draft.options;
+  if (draft.hint) field.hint = draft.hint;
+  return field;
 }
 
 export function registerDetectFieldsRoute(
@@ -73,31 +52,32 @@ export function registerDetectFieldsRoute(
     '/api/ai/detect-fields',
     { config: rateLimit ? { rateLimit } : undefined },
     async (request, reply) => {
-    const pages = parsePagesBody(request.body);
-    const allFields: FieldReply[] = [];
+      const pages = parsePagesBody(request.body);
+      const allFields: FieldReply[] = [];
 
-    for (const page of pages) {
-      let parsed: { fields?: unknown };
-      try {
-        parsed = await chatJson<{ fields?: unknown }>(
-          {
-            system: DETECT_FIELDS_SYSTEM,
-            userText: detectFieldsUserPrompt(page.pageIndex),
-            images: [{ imageBase64: page.imageBase64, mimeType: page.mimeType }],
-            maxTokens: 4096,
-          },
-          'detect-fields'
-        );
-      } catch (error) {
-        if (error instanceof UpstreamError) {
-          throw new HttpError(error.message, error.status === 0 ? 502 : error.status, 'detect_upstream_failed');
+      for (const page of pages) {
+        let decoded;
+        try {
+          decoded = decodePage(page);
+        } catch (error) {
+          if (error instanceof HttpError) throw error;
+          throw new HttpError('Could not decode the page image.', 400, 'bad_image');
         }
-        throw error;
+
+        let pageOcr;
+        try {
+          pageOcr = await recognizeImage(decoded.bytes, decoded.image.width, decoded.image.height);
+        } catch (error) {
+          if (error instanceof OcrModelError) {
+            throw new HttpError(error.message, 502, 'detect_upstream_failed');
+          }
+          throw error;
+        }
+
+        allFields.push(...detectFields(decoded.image, pageOcr.items, page.pageIndex).map(normalizeField));
       }
 
-      allFields.push(...normalizeFields(parsed.fields, page.pageIndex));
+      return reply.send({ fields: allFields });
     }
-
-    return reply.send({ fields: allFields });
-  });
+  );
 }
